@@ -1,0 +1,7 @@
+body {
+  margin: 0;
+  background: skyblue;
+}
+.canvas {
+  position: relative;
+}
