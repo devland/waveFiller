@@ -1,4 +1,8 @@
 function filler(options) {
+  this.threshold = 20;
+  this.radius = 50;
+  this.blank = [255, 255, 255, 255]; // white
+  this.pixel = [255, 0, 0, 50]; //red
   this.initialize = () => {
     this.canvas = document.getElementById(options.canvasId);
     this.context = this.canvas.getContext('2d');
@@ -27,7 +31,7 @@ function filler(options) {
       this.canvas.height = height;
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
-      this.imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
       if (resize) {
         resized = this.fit();
         this.canvas.style.width = resized.width;
@@ -63,19 +67,112 @@ function filler(options) {
   }
   this.cursor = {};
   this.getPixel = (x, y) => {
-    return this.context.getImageData(x, y, 1, 1).data;
+    const start = (y * this.image.width + x) * 4;
+    return this.pixels.data.slice(start, start + 4);
   }
-  this.fill = (x, y) => {
+  this.putPixel = (x, y) => {
+    const start = (y * this.image.width + x) * 4;
+    this.pixels.data[start] = this.pixel[0];
+    this.pixels.data[start + 1] = this.pixel[1];
+    this.pixels.data[start + 2] = this.pixel[2];
+    this.pixels.data[start + 3] = this.pixel[3];
+  }
+  this.isBlank = (x, y) => {
+    const pixel = this.getPixel(x, y);
+    if (Math.abs(this.blank[0] - pixel[0]) <= this.threshold &&
+        Math.abs(this.blank[1] - pixel[1]) <= this.threshold &&
+        Math.abs(this.blank[2] - pixel[2]) <= this.threshold &&
+        Math.abs(this.blank[3] - pixel[3]) <= this.threshold) {
+      return true;
+    }
+    return false;
+  }
+  this.distance = (fx, fy, sx, sy) => {
+    return Math.floor(Math.sqrt(Math.pow(sy - fy, 2) + Math.pow(sx - fx, 2)));
+  }
+  /*this.fill = (x, y) => {
     this.context.save();
     this.context.fillStyle = 'red';
     this.context.fillRect(x, y, 1, 1);
     this.context.restore();
+  }*/
+  this.parseNeighbors = (x, y, shorePixel) => {
+    const doNeighbor = (px, py, withinImage) => {
+      const label = `${px}|${py}`;
+      const withinRadius = this.distance(x, y, shorePixel[0], shorePixel[1]) <= this.radius;
+      if (!this.done[label] && withinImage && this.isBlank(px, py)) {
+        if (withinRadius) {
+          this.done[label] = true;
+          this.putPixel(px, py);
+          this.toDoNext.push([px, py]);
+        }
+        else {
+          this.edge[label] = [px, py];
+        }
+      }
+    }
+    let px = x;
+    let py = y - 1;
+    doNeighbor(px, py, py >= 0);
+    px = x + 1;
+    py = y;
+    doNeighbor(px, py, px <= this.image.width);
+    px = x;
+    py = y + 1;
+    doNeighbor(px, py, py <= this.image.height);
+    px = x - 1;
+    py = y;
+    doNeighbor(px, py, px >= 0);
+  }
+  this.doShorePixel = (shorePixel) => {
+    for (let pixel of this.toDo) {
+      this.parseNeighbors(pixel[0], pixel[1], shorePixel);
+    }
+    this.toDo = this.toDoNext;
+    this.lastToDo = this.toDoNext;
+    this.toDoNext = [];
+  }
+  this.parseShore = () => {
+    this.shore = this.nextShore;
+    this.nextShore = [];
+    for (let item of this.shore) {
+      this.toDo = [item];
+      while (this.toDo.length) {
+        this.doShorePixel(item);
+      }
+    }
+    this.nextShore = Object.values(this.edge);
+  }
+  this.paintFrame = () => {
+    this.context.putImageData(this.pixels, 0, 0);
+  }
+  this.compute = () => {
+    this.edge = {};
+    this.parseShore();
+    this.paintFrame();
+    if (this.nextShore.length) {
+      window.requestAnimationFrame(this.compute);
+    }
+    else {
+      this.end = new Date();
+      console.log(`done in ${this.end - this.start} ms`);
+      this.locked = false;
+    }
   }
   this.click = (x, y) => {
-    this.cursor.x = parseInt((x - this.canvas.offsetLeft) * this.canvasScale);
-    this.cursor.y = parseInt((y - this.canvas.offsetTop) * this.canvasScale);
-    const pixel = this.getPixel(this.cursor.x, this.cursor.y);
-    console.log(this.cursor.x, this.cursor.y, pixel);
-    this.fill(this.cursor.x, this.cursor.y);
+    if (this.locked) {
+      console.log('> nope; locked.');
+      return;
+    }
+    this.locked = true;
+    this.done = {};
+    x = Math.floor((x - this.canvas.offsetLeft) * this.canvasScale);
+    y = Math.floor((y - this.canvas.offsetTop) * this.canvasScale);
+    this.shore = [];
+    this.nextShore = [[x, y]];
+    this.toDoNext = [];
+    this.toDo = this.nextShore;
+    this.start = new Date();
+    this.compute();
   }
 }
