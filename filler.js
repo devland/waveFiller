@@ -3,6 +3,7 @@ function filler(options) {
   this.radius = 50;
   this.blank = [255, 255, 255, 255]; // white
   this.pixel = [255, 0, 0, 50]; //red
+  this.fps = 60;
   this.initialize = () => {
     this.canvas = document.getElementById(options.canvasId);
     this.context = this.canvas.getContext('2d');
@@ -146,19 +147,34 @@ function filler(options) {
   this.paintFrame = () => {
     this.context.putImageData(this.pixels, 0, 0);
   }
+  const frameTime = 1000 / this.fps;
+  this.skipFrame = false;
   this.compute = () => {
+    if (this.skipFrame) {
+      if (window.performance.now() - this.frameStart + this.renderTime >= frameTime) {
+        this.skipFrame = false;
+      }
+      window.requestAnimationFrame(this.compute);
+      return;
+    }
+    this.frameStart = window.performance.now();
     this.edge = {};
     this.parseShore();
     this.paintFrame();
-    if (this.nextShore.length) {
-      window.requestAnimationFrame(this.compute);
+    this.renderTime = window.performance.now() - this.frameStart;
+    if (this.renderTime < frameTime) {
+      this.skipFrame = true;
     }
-    else {
-      this.end = new Date();
+    if (!this.nextShore.length) {
+      this.end = window.performance.now();
       console.log(`done in ${this.end - this.start} ms`);
       this.locked = false;
     }
+    else {
+      window.requestAnimationFrame(this.compute);
+    }
   }
+  this.renderTime = 1000;
   this.click = (x, y) => {
     if (this.locked) {
       console.log('> nope; locked.');
@@ -172,7 +188,7 @@ function filler(options) {
     this.nextShore = [[x, y]];
     this.toDoNext = [];
     this.toDo = this.nextShore;
-    this.start = new Date();
+    this.start = window.performance.now();
     this.compute();
   }
 }
