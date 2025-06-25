@@ -3,7 +3,7 @@ function filler(options) {
   this.radius = 50;
   this.blank = [255, 255, 255, 255]; // white
   this.pixel = [255, 0, 0, 50]; //red
-  this.fps = 60;
+  this.fps = 10; // frame limiter
   this.initialize = () => {
     this.canvas = document.getElementById(options.canvasId);
     this.context = this.canvas.getContext('2d');
@@ -12,7 +12,7 @@ function filler(options) {
       this.click(event.clientX, event.clientY);
     }));
   }
-  this.paint = (width, height, resize) => {
+  this.paint = (width, height, resize) => { // paint image in canvas
     this.image = new Image();
     this.image.src = options.imageSrc;
     this.image.onload = () => {
@@ -45,7 +45,7 @@ function filler(options) {
       this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
     }
   }
-  this.fit = () => {
+  this.fit = () => { // resize image to fit canvas
     let width;
     let height;
     if (this.image.width >= this.image.height) {
@@ -88,15 +88,9 @@ function filler(options) {
     }
     return false;
   }
-  this.distance = (fx, fy, sx, sy) => {
+  this.distance = (fx, fy, sx, sy) => { // compute distance between pixels
     return Math.floor(Math.sqrt(Math.pow(sy - fy, 2) + Math.pow(sx - fx, 2)));
   }
-  /*this.fill = (x, y) => {
-    this.context.save();
-    this.context.fillStyle = 'red';
-    this.context.fillRect(x, y, 1, 1);
-    this.context.restore();
-  }*/
   this.parseNeighbors = (x, y, shorePixel) => {
     const doNeighbor = (px, py, withinImage) => {
       const label = `${px}|${py}`;

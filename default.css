@@ -1,6 +1,7 @@
 body {
   margin: 0;
   background: skyblue;
+  background-image: url("big.jpg");
 }
 .canvas {
   position: relative;
