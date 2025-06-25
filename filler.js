@@ -3,7 +3,7 @@ function filler(options) {
   this.radius = 50;
   this.blank = [255, 255, 255, 255]; // white
   this.pixel = [255, 0, 0, 50]; //red
-  this.fps = 10; // frame limiter
+  this.fps = 60; // frame limiter
   this.initialize = () => {
     this.canvas = document.getElementById(options.canvasId);
     this.context = this.canvas.getContext('2d');
@@ -89,14 +89,27 @@ function filler(options) {
     return false;
   }
   this.distance = (fx, fy, sx, sy) => { // compute distance between pixels
-    return Math.floor(Math.sqrt(Math.pow(sy - fy, 2) + Math.pow(sx - fx, 2)));
+    return Math.sqrt(Math.pow(sy - fy, 2) + Math.pow(sx - fx, 2));
+  }
+  this.withinRadius = (px, py, shorePixel) => { // compute if shorePixel is within the radius of any of the toDo pixels
+    if (this.distance(px, py, shorePixel[0], shorePixel[1]) <= this.radius) {
+      return true;
+    }
+    for (let pixel of this.shore) {
+      if (pixel[0] == shorePixel[0] && pixel[1] == shorePixel[1]) {
+        continue;
+      }
+      if (this.distance(px, py, pixel[0], pixel[1]) <= this.radius) {
+        return true;
+      }
+    }
+    return false;
   }
   this.parseNeighbors = (x, y, shorePixel) => {
     const doNeighbor = (px, py, withinImage) => {
       const label = `${px}|${py}`;
-      const withinRadius = this.distance(x, y, shorePixel[0], shorePixel[1]) <= this.radius;
       if (!this.done[label] && withinImage && this.isBlank(px, py)) {
-        if (withinRadius) {
+        if (this.withinRadius(px, py, shorePixel)) {
           this.done[label] = true;
           this.putPixel(px, py);
           this.toDoNext.push([px, py]);
@@ -123,7 +136,7 @@ function filler(options) {
     for (let pixel of this.toDo) {
       this.parseNeighbors(pixel[0], pixel[1], shorePixel);
     }
-    this.toDo = this.toDoNext;
+    this.toDo = this.toDoNext; // new shore line
     this.lastToDo = this.toDoNext;
     this.toDoNext = [];
   }
@@ -145,7 +158,7 @@ function filler(options) {
   this.skipFrame = false;
   this.compute = () => {
     if (this.skipFrame) {
-      if (window.performance.now() - this.frameStart + this.renderTime >= frameTime) {
+      if (window.performance.now() - this.frameStart >= frameTime) {
         this.skipFrame = false;
       }
       window.requestAnimationFrame(this.compute);
