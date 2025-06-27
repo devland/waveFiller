@@ -6,7 +6,8 @@
     <script type="text/javascript">
       const bucket = new filler({
         canvasId: 'canvas',
-        imageSrc: 'maze.png'
+        imageSrc: 'maze.png',
+        workerPath: '../'
       });
       window.addEventListener("load", (event) => {
         bucket.initialize();

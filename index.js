@@ -1,16 +1,56 @@
 function filler(options) {
-  this.threshold = 20;
-  this.radius = 50;
-  this.blank = [255, 255, 255, 255]; // white
-  this.pixel = [255, 0, 0, 50]; //red
-  this.fps = 60; // frame limiter
-  this.initialize = () => {
-    this.canvas = document.getElementById(options.canvasId);
-    this.context = this.canvas.getContext('2d');
-    this.paint(1920, null, true);
-    this.canvas.addEventListener('click', ((event) => {
-      this.click(event.clientX, event.clientY);
-    }));
+  this.threshold = 20; // maximum deviance in color channell value allowed for a pixel to be considered blank
+  this.radius = 50; // wave size in pixels rendered per frame
+  this.blank = [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
+  this.pixel = [255, 0, 0, 50]; //red - set it to whatever fill color you want as RGBA
+  this.fps = 60; // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
+  this.workerCount = window.navigator.hardwareConcurrency - 1; // number of web workers to be used
+  this.initialize = async () => {
+    try {
+      this.canvas = document.getElementById(options.canvasId);
+      this.context = this.canvas.getContext('2d');
+      this.paint(1920, null, true);
+      this.canvas.addEventListener('click', ((event) => {
+        this.click(event.clientX, event.clientY);
+      }));
+      this.workers = [];
+      let workersInitialized = 0;
+      const workerBlob = await (await fetch(`${options.workerPath}worker.js`)).blob();
+      for (let i = 0; i < this.workerCount; i++) {
+        //const worker = new Worker(URL.createObjectURL(new Blob([workerText], { type: "text/javascript" })));
+        const worker = new Worker(URL.createObjectURL(workerBlob));
+        worker.onmessage = (message) => {
+          switch (message.data.status) {
+            case 'initDone':
+              workersInitialized++;
+              if (workersInitialized == this.workerCount) {
+                console.log(`web worker init done; ${workersInitialized} web workers ready`);
+              }
+            break;
+            default:
+              console.log(`message from worker ${i} received`);
+              console.log(message.data);
+            break;
+          }
+        }
+        worker.onerror = (error) => {
+          console.log('worker error');
+          console.log(error);
+        }
+        worker.onmessageerror = (error) => {
+          console.log('worker message error');
+          console.log(error);
+        }
+        worker.postMessage({
+          type: 'init',
+          input: options
+        });
+        this.workers.push(worker);
+      }
+    }
+    catch (error) {
+      console.log(error);
+    }
   }
   this.paint = (width, height, resize) => { // paint image in canvas
     this.image = new Image();
@@ -141,6 +181,17 @@ function filler(options) {
     this.toDoNext = [];
   }
   this.parseShore = () => {
+    this.shore = this.nextShore;
+    this.nextShore = [];
+    for (let item of this.shore) {
+      this.toDo = [item];
+      while (this.toDo.length) {
+        this.doShorePixel(item);
+      }
+    }
+    this.nextShore = Object.values(this.edge);
+  }
+  this.parseShoreWithWorkers = () => {
     this.shore = this.nextShore;
     this.nextShore = [];
     for (let item of this.shore) {
