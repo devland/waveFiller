@@ -34,10 +34,10 @@ this.parseNeighbors = (x, y, shorePixel) => {
   doNeighbor(px, py, py >= 0);
   px = x + 1;
   py = y;
-  doNeighbor(px, py, px <= this.image.width);
+  doNeighbor(px, py, px <= this.canvas.width);
   px = x;
   py = y + 1;
-  doNeighbor(px, py, py <= this.image.height);
+  doNeighbor(px, py, py <= this.canvas.height);
   px = x - 1;
   py = y;
   doNeighbor(px, py, px >= 0);

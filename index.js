@@ -1,15 +1,15 @@
 function filler(options) {
-  this.threshold = 20; // maximum deviance in color channell value allowed for a pixel to be considered blank
-  this.radius = 50; // wave size in pixels rendered per frame
-  this.blank = [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
-  this.pixel = [255, 0, 0, 50]; //red - set it to whatever fill color you want as RGBA
-  this.fps = 60; // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
-  this.workerCount = window.navigator.hardwareConcurrency - 1; // number of web workers to be used
+  this.threshold = options.threshold || 20; // maximum deviance in color channell value allowed for a pixel to be considered blank
+  this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
+  this.pixel = options.pixel || [255, 0, 0, 50]; //red - set it to whatever fill color you want as RGBA
+  this.radius = options.radius || 50; // wave size in pixels rendered per frame
+  this.fps = options.fps || 60; // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
+  this.workerCount = options.workerCount || window.navigator.hardwareConcurrency - 1; // number of web workers to be used
   this.initialize = async () => {
     try {
       this.canvas = document.getElementById(options.canvasId);
       this.context = this.canvas.getContext('2d');
-      this.paint(1920, null, true);
+      this.paint(options.fit.width, options.fit.height, options.fit.resize);
       this.canvas.addEventListener('click', ((event) => {
         this.click(event.clientX, event.clientY);
       }));
@@ -17,7 +17,6 @@ function filler(options) {
       let workersInitialized = 0;
       const workerBlob = await (await fetch(`${options.workerPath}worker.js`)).blob();
       for (let i = 0; i < this.workerCount; i++) {
-        //const worker = new Worker(URL.createObjectURL(new Blob([workerText], { type: "text/javascript" })));
         const worker = new Worker(URL.createObjectURL(workerBlob));
         worker.onmessage = (message) => {
           switch (message.data.status) {
@@ -49,6 +48,7 @@ function filler(options) {
       }
     }
     catch (error) {
+      console.log('initialize error');
       console.log(error);
     }
   }
@@ -58,9 +58,15 @@ function filler(options) {
     this.image.onload = () => {
       let resized;
       if (width) {
+        if (width > this.image.width) {
+          width = this.image.width;
+        }
         height = this.image.height / this.image.width * width;
       }
       else if (height) {
+        if (height > this.image.height) {
+          height = this.image.height;
+        }
         width = this.image.width / this.image.height * height;
       }
       else {
@@ -73,6 +79,7 @@ function filler(options) {
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
       this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      console.log(width, height);
       if (resize) {
         resized = this.fit();
         this.canvas.style.width = resized.width;
@@ -82,7 +89,7 @@ function filler(options) {
         this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
       if (this.canvas.offsetHeight < window.innerHeight)
         this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
-      this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
+      this.canvasScale = this.canvas.width / this.canvas.offsetWidth
     }
   }
   this.fit = () => { // resize image to fit canvas
@@ -108,11 +115,11 @@ function filler(options) {
   }
   this.cursor = {};
   this.getPixel = (x, y) => {
-    const start = (y * this.image.width + x) * 4;
+    const start = (y * this.canvas.width + x) * 4;
     return this.pixels.data.slice(start, start + 4);
   }
   this.putPixel = (x, y) => {
-    const start = (y * this.image.width + x) * 4;
+    const start = (y * this.canvas.width + x) * 4;
     this.pixels.data[start] = this.pixel[0];
     this.pixels.data[start + 1] = this.pixel[1];
     this.pixels.data[start + 2] = this.pixel[2];
@@ -164,10 +171,10 @@ function filler(options) {
     doNeighbor(px, py, py >= 0);
     px = x + 1;
     py = y;
-    doNeighbor(px, py, px <= this.image.width);
+    doNeighbor(px, py, px <= this.canvas.width);
     px = x;
     py = y + 1;
-    doNeighbor(px, py, py <= this.image.height);
+    doNeighbor(px, py, py <= this.canvas.height);
     px = x - 1;
     py = y;
     doNeighbor(px, py, px >= 0);

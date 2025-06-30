@@ -7,6 +7,17 @@
       const bucket = new filler({
         canvasId: 'canvas',
         imageSrc: 'maze.png',
+        threshold: 40, // maximum deviance in color channell value allowed for a pixel to be considered blank
+        blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
+        pixel: [255, 0, 0, 50], //red - set it to whatever fill color you want as RGBA
+        radius: 10, // wave size in pixels rendered per frame
+        fps: 30, // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
+        fit: {
+          width: 600, // dimension to use for resize reference; if image dimension is lower that will be used instead
+          height: null,
+          resize: true
+        },
+        workerCount: window.navigator.hardwareConcurrency - 1, // number of web workers to be used
         workerPath: '../'
       });
       window.addEventListener("load", (event) => {
