@@ -58,15 +58,9 @@ function filler(options) {
     this.image.onload = () => {
       let resized;
       if (width) {
-        if (width > this.image.width) {
-          width = this.image.width;
-        }
         height = this.image.height / this.image.width * width;
       }
       else if (height) {
-        if (height > this.image.height) {
-          height = this.image.height;
-        }
         width = this.image.width / this.image.height * height;
       }
       else {
@@ -79,7 +73,6 @@ function filler(options) {
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
       this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      console.log(width, height);
       if (resize) {
         resized = this.fit();
         this.canvas.style.width = resized.width;
