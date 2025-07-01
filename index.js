@@ -6,83 +6,89 @@ function filler(options) {
   this.fps = options.fps || 60; // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
   this.workerCount = options.workerCount || window.navigator.hardwareConcurrency - 1; // number of web workers to be used
   this.initialize = async () => {
-    try {
-      this.canvas = document.getElementById(options.canvasId);
-      this.context = this.canvas.getContext('2d');
-      this.paint(options.fit.width, options.fit.height, options.fit.resize);
-      this.canvas.addEventListener('click', ((event) => {
-        this.click(event.clientX, event.clientY);
-      }));
-      this.workers = [];
-      let workersInitialized = 0;
-      const workerBlob = await (await fetch(`${options.workerPath}worker.js`)).blob();
-      for (let i = 0; i < this.workerCount; i++) {
-        const worker = new Worker(URL.createObjectURL(workerBlob));
-        worker.onmessage = (message) => {
-          switch (message.data.status) {
-            case 'initDone':
-              workersInitialized++;
-              if (workersInitialized == this.workerCount) {
-                console.log(`web worker init done; ${workersInitialized} web workers ready`);
-              }
-            break;
-            default:
-              console.log(`message from worker ${i} received`);
-              console.log(message.data);
-            break;
-          }
-        }
-        worker.onerror = (error) => {
-          console.log('worker error');
-          console.log(error);
-        }
-        worker.onmessageerror = (error) => {
-          console.log('worker message error');
-          console.log(error);
-        }
-        worker.postMessage({
-          type: 'init',
-          input: options
-        });
-        this.workers.push(worker);
-      }
-    }
-    catch (error) {
-      console.log('initialize error');
-      console.log(error);
-    }
+    this.canvas = document.getElementById(options.canvasId);
+    this.context = this.canvas.getContext('2d');
+    this.paint(options.fit.width, options.fit.height, options.fit.resize);
+    this.canvas.addEventListener('click', ((event) => {
+      this.click(event.clientX, event.clientY);
+    }));
   }
   this.paint = (width, height, resize) => { // paint image in canvas
     this.image = new Image();
     this.image.src = options.imageSrc;
-    this.image.onload = () => {
-      let resized;
-      if (width) {
-        height = this.image.height / this.image.width * width;
+    this.image.onload = async () => {
+      try {
+        let resized;
+        if (width) {
+          height = this.image.height / this.image.width * width;
+        }
+        else if (height) {
+          width = this.image.width / this.image.height * height;
+        }
+        else {
+          resized = this.fit();
+          width = resized.width;
+          height = resized.height;
+        }
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+        this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        if (resize) {
+          resized = this.fit();
+          this.canvas.style.width = resized.width;
+          this.canvas.style.height = resized.height;
+        }
+        if (this.canvas.offsetWidth < window.innerWidth)
+          this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
+        if (this.canvas.offsetHeight < window.innerHeight)
+          this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
+        this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
+        this.workers = [];
+        this.worked = 0;
+        const workerBlob = await (await fetch(`${options.workerPath}worker.js`)).blob();
+        for (let index = 0; index < this.workerCount; index++) {
+          const worker = new Worker(URL.createObjectURL(workerBlob));
+          worker.onmessage = (message) => {
+            switch (message.data.status) {
+              case 'initDone':
+                this.worked++;
+                if (this.worked == this.workerCount) {
+                  console.log(`web worker init done; ${this.worked} web workers ready`);
+                }
+              break;
+              case 'done':
+                this.handleWorkerDone(message.data.output);
+              break;
+            }
+          }
+          worker.onerror = (error) => {
+            console.log(`worker ${index} error`);
+            console.log(error);
+          }
+          worker.onmessageerror = (error) => {
+            console.log(`worker ${index} message error`);
+            console.log(error);
+          }
+          worker.postMessage({
+            type: 'init',
+            input: {
+              threshold: this.threshold,
+              blank: this.blank,
+              pixel: this.pixel,
+              radius: this.radius,
+              width: this.canvas.width,
+              height: this.canvas.height
+            }
+          });
+          this.workers.push(worker);
+        }
       }
-      else if (height) {
-        width = this.image.width / this.image.height * height;
+      catch (error) {
+        console.log('initialize error');
+        console.log(error);
       }
-      else {
-        resized = this.fit();
-        width = resized.width;
-        height = resized.height;
-      }
-      this.canvas.width = width;
-      this.canvas.height = height;
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
-      this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      if (resize) {
-        resized = this.fit();
-        this.canvas.style.width = resized.width;
-        this.canvas.style.height = resized.height;
-      }
-      if (this.canvas.offsetWidth < window.innerWidth)
-        this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
-      if (this.canvas.offsetHeight < window.innerHeight)
-        this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
-      this.canvasScale = this.canvas.width / this.canvas.offsetWidth
     }
   }
   this.fit = () => { // resize image to fit canvas
@@ -107,10 +113,6 @@ function filler(options) {
     return { width, height };
   }
   this.cursor = {};
-  this.getPixel = (x, y) => {
-    const start = (y * this.canvas.width + x) * 4;
-    return this.pixels.data.slice(start, start + 4);
-  }
   this.putPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;
     this.pixels.data[start] = this.pixel[0];
@@ -118,89 +120,68 @@ function filler(options) {
     this.pixels.data[start + 2] = this.pixel[2];
     this.pixels.data[start + 3] = this.pixel[3];
   }
-  this.isBlank = (x, y) => {
-    const pixel = this.getPixel(x, y);
-    if (Math.abs(this.blank[0] - pixel[0]) <= this.threshold &&
-        Math.abs(this.blank[1] - pixel[1]) <= this.threshold &&
-        Math.abs(this.blank[2] - pixel[2]) <= this.threshold &&
-        Math.abs(this.blank[3] - pixel[3]) <= this.threshold) {
-      return true;
+  this.getWorkerShores = () => { // assign shore pixels to workers
+    this.workerShores = [];
+    for (let i = 0; i < this.workerCount; i++) {
+      this.workerShores.push([]);
     }
-    return false;
-  }
-  this.distance = (fx, fy, sx, sy) => { // compute distance between pixels
-    return Math.sqrt(Math.pow(sy - fy, 2) + Math.pow(sx - fx, 2));
-  }
-  this.withinRadius = (px, py, shorePixel) => { // compute if shorePixel is within the radius of any of the toDo pixels
-    if (this.distance(px, py, shorePixel[0], shorePixel[1]) <= this.radius) {
-      return true;
-    }
-    for (let pixel of this.shore) {
-      if (pixel[0] == shorePixel[0] && pixel[1] == shorePixel[1]) {
-        continue;
+    let worker = 0;
+    let working = 0;
+    for (let item of this.nextShore) {
+      this.workerShores[worker].push(item);
+      worker++;
+      if (working < this.workerCount) {
+        working++;
       }
-      if (this.distance(px, py, pixel[0], pixel[1]) <= this.radius) {
-        return true;
+      if (worker > this.workerCount - 1) {
+        worker = 0;
       }
     }
-    return false;
-  }
-  this.parseNeighbors = (x, y, shorePixel) => {
-    const doNeighbor = (px, py, withinImage) => {
-      const label = `${px}|${py}`;
-      if (!this.done[label] && withinImage && this.isBlank(px, py)) {
-        if (this.withinRadius(px, py, shorePixel)) {
-          this.done[label] = true;
-          this.putPixel(px, py);
-          this.toDoNext.push([px, py]);
-        }
-        else {
-          this.edge[label] = [px, py];
-        }
-      }
-    }
-    let px = x;
-    let py = y - 1;
-    doNeighbor(px, py, py >= 0);
-    px = x + 1;
-    py = y;
-    doNeighbor(px, py, px <= this.canvas.width);
-    px = x;
-    py = y + 1;
-    doNeighbor(px, py, py <= this.canvas.height);
-    px = x - 1;
-    py = y;
-    doNeighbor(px, py, px >= 0);
-  }
-  this.doShorePixel = (shorePixel) => {
-    for (let pixel of this.toDo) {
-      this.parseNeighbors(pixel[0], pixel[1], shorePixel);
-    }
-    this.toDo = this.toDoNext; // new shore line
-    this.lastToDo = this.toDoNext;
-    this.toDoNext = [];
-  }
-  this.parseShore = () => {
-    this.shore = this.nextShore;
-    this.nextShore = [];
-    for (let item of this.shore) {
-      this.toDo = [item];
-      while (this.toDo.length) {
-        this.doShorePixel(item);
-      }
-    }
-    this.nextShore = Object.values(this.edge);
+    return working;
   }
   this.parseShoreWithWorkers = () => {
-    this.shore = this.nextShore;
-    this.nextShore = [];
-    for (let item of this.shore) {
-      this.toDo = [item];
-      while (this.toDo.length) {
-        this.doShorePixel(item);
+    this.worked = 0;
+    this.working = this.getWorkerShores();
+    for (let i = 0; i < this.workerShores.length; i++) {
+      if (this.workerShores[i].length) {
+        this.workers[i].postMessage({
+          type: 'work',
+          input: {
+            nextShore: this.workerShores[i],
+            pixels: this.pixels.data,
+            done: this.done
+          }
+        });
       }
     }
-    this.nextShore = Object.values(this.edge);
+  }
+  this.handleWorkerDone = (output) => {
+    if (this.worked == 0) {
+      this.nextShore = [];
+      this.filled = [];
+    }
+    this.worked++;
+    this.nextShore = this.nextShore.concat(output.nextShore);
+    this.filled = this.filled.concat(output.filled);
+    this.done = {...this.done, ...output.done};
+    if (this.worked == this.working) {
+      for (let item of this.filled) {
+        this.putPixel(item[0], item[1]);
+      }
+      this.paintFrame();
+      this.renderTime = window.performance.now() - this.frameStart;
+      if (this.renderTime < frameTime) {
+        this.skipFrame = true;
+      }
+      if (!this.nextShore.length) {
+        this.end = window.performance.now();
+        console.log(`done in ${this.end - this.start} ms`);
+        this.locked = false;
+      }
+      else {
+        window.requestAnimationFrame(this.compute);
+      }
+    }
   }
   this.paintFrame = () => {
     this.context.putImageData(this.pixels, 0, 0);
@@ -216,21 +197,7 @@ function filler(options) {
       return;
     }
     this.frameStart = window.performance.now();
-    this.edge = {};
-    this.parseShore();
-    this.paintFrame();
-    this.renderTime = window.performance.now() - this.frameStart;
-    if (this.renderTime < frameTime) {
-      this.skipFrame = true;
-    }
-    if (!this.nextShore.length) {
-      this.end = window.performance.now();
-      console.log(`done in ${this.end - this.start} ms`);
-      this.locked = false;
-    }
-    else {
-      window.requestAnimationFrame(this.compute);
-    }
+    this.parseShoreWithWorkers();
   }
   this.renderTime = 1000;
   this.click = (x, y) => {
@@ -244,8 +211,6 @@ function filler(options) {
     y = Math.floor((y - this.canvas.offsetTop) * this.canvasScale);
     this.shore = [];
     this.nextShore = [[x, y]];
-    this.toDoNext = [];
-    this.toDo = this.nextShore;
     this.start = window.performance.now();
     this.compute();
   }
