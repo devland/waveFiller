@@ -74,12 +74,15 @@ function filler(options) {
           worker.postMessage({
             type: 'init',
             input: {
+              index,
               threshold: this.threshold,
               blank: this.blank,
               pixel: this.pixel,
               radius: this.radius,
               width: this.canvas.width,
-              height: this.canvas.height
+              height: this.canvas.height,
+              pixels: this.pixels.data,
+              done: {}
             }
           });
           this.workers.push(worker);
@@ -147,9 +150,7 @@ function filler(options) {
         this.workers[i].postMessage({
           type: 'work',
           input: {
-            nextShore: this.workerShores[i],
-            pixels: this.pixels.data,
-            done: this.done
+            nextShore: this.workerShores[i]
           }
         });
       }

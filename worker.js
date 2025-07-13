@@ -95,9 +95,9 @@ onmessage = (message) => {
       postMessage({
         status: 'done',
         output: {
+          index: context.index,
           nextShore: context.nextShore,
-          filled: context.filled, // pixels to be filled in main thread
-          done: context.done
+          filled: context.filled // pixels to be filled in main thread
         }
       });
     break;
