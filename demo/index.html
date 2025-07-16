@@ -11,9 +11,9 @@
         blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
         pixel: [255, 0, 0, 50], // red - set it to whatever fill color you want as RGBA
         radius: 50, // wave size in pixels rendered per frame
-        fps: 0.5, // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
+        fps: 30, // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
         fit: {
-          width: 2000, // this will be the actual canvas width; height will be calculated relative to this width
+          width: 1000, // this will be the actual canvas width; height will be calculated relative to this width
           height: null, // if set height will overwrite width as the dimension for resize reference; width will be calculated relative to this height
           resize: true // if true canvas style size will fit the screen; rendered pixel size will not change
         },

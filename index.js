@@ -247,7 +247,6 @@ function filler(options) {
     }
   }
   this.computeNextFrame = () => {
-    console.log('compute frame', this.frame);
     this.frameStart = window.performance.now();
     window.requestAnimationFrame(this.checkFrameReady);
   }
