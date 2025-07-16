@@ -4,8 +4,9 @@ function filler(options) {
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
   this.radius = options.radius || 50; // wave size in pixels rendered per frame
   this.fps = options.fps || 60; // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
-  this.workerCount = options.workerCount || window.navigator.hardwareConcurrency - 1; // number of web workers to be used
+  this.workerCount = options.workerCount || Math.floor(window.navigator.hardwareConcurrency / 2); // number of web workers to be used
   this.minWorkerLoad = options.minWorkerLoad || 500; // minimum number of shore pixels, if more are available, to be assigned to a web worker
+  this.computeAhead = options.computeAhead; // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
   this.libraryPath = options.libraryPath || './' // path to library directory relative to current context
   const frameTime = 1000 / this.fps;
   let skipFrame = false;
@@ -201,7 +202,9 @@ function filler(options) {
     outputFrame.worked += output.worked;
     nextFrame.shore = nextFrame.shore.concat(output.nextShore);
     outputFrame.filled = outputFrame.filled.concat(output.filled);
-    this.assignWork();
+    if (this.computeAhead) {
+      this.assignWork();
+    }
   }
   this.checkFrameReady = () => {
     if (skipFrame) {
@@ -248,6 +251,9 @@ function filler(options) {
   }
   this.computeNextFrame = () => {
     this.frameStart = window.performance.now();
+    if (!this.computeAhead) {
+      this.assignWork();
+    }
     window.requestAnimationFrame(this.checkFrameReady);
   }
   this.click = (x, y) => {
