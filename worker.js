@@ -6,11 +6,11 @@ const withinRadius = (px, py, shorePixel) => { // compute if shorePixel is withi
   if (distance(px, py, shorePixel[0], shorePixel[1]) <= context.radius) {
     return true;
   }
-  for (let pixel of context.shore) {
-    if (pixel[0] == shorePixel[0] && pixel[1] == shorePixel[1]) {
+  for (let i = 0; i < context.shore.length; i++) {
+    if (context.shore[i][0] == shorePixel[0] && context.shore[i][1] == shorePixel[1]) {
       continue;
     }
-    if (distance(px, py, pixel[0], pixel[1]) <= context.radius) {
+    if (distance(px, py, context.shore[i][0], context.shore[i][1]) <= context.radius) {
       return true;
     }
   }
@@ -39,7 +39,7 @@ const doNeighbor = (px, py, withinImage, shorePixel) => {
       context.toDoNext.push([px, py]);
     }
     else {
-      context.edge[label] = [px, py];
+      context.edge.push([px, py]);
     }
   }
 }
@@ -58,26 +58,24 @@ const parseNeighbors = (x, y, shorePixel) => {
   doNeighbor(px, py, px >= 0, shorePixel);
 }
 const doShorePixel = (shorePixel) => {
-  for (let pixel of context.toDo) {
-    parseNeighbors(pixel[0], pixel[1], shorePixel);
+  for (let i = 0; i < context.toDo.length; i++) {
+    parseNeighbors(context.toDo[i][0], context.toDo[i][1], shorePixel);
   }
   context.toDo = context.toDoNext; // new shore line
   context.toDoNext = [];
 }
 const parseShore = () => {
-  context.shore = context.nextShore;
-  context.nextShore = [];
-  for (let item of context.shore) {
-    context.toDo = [item];
+  for (let i = 0; i < context.shore.length; i++) {
+    context.toDo = [context.shore[i]];
     while (context.toDo.length) {
-      doShorePixel(item);
+      doShorePixel(context.shore[i]);
     }
   }
-  context.nextShore = Object.values(context.edge);
 }
 const init = (input) => {
-  for (let key in input) {
-    context[key] = input[key];
+  const keys = Object.keys(input);
+  for (let i = 0; i < keys.length; i++) {
+    context[keys[i]] = input[keys[i]];
   }
 }
 onmessage = (message) => {
@@ -88,16 +86,18 @@ onmessage = (message) => {
     break;
     case 'work':
       context.toDoNext = [];
-      context.edge = {};
+      context.edge = [];
       context.filled = [];
       init(message.data.input);
       parseShore();
       postMessage({
         status: 'done',
         output: {
-          index: context.index,
-          nextShore: context.nextShore,
-          filled: context.filled // pixels to be filled in main thread
+          index: context.index, // worker id
+          frame: context.frame,
+          worked: context.shore.length,
+          filled: context.filled, // pixels to be filled in main thread
+          nextShore: context.edge
         }
       });
     break;
