@@ -1,7 +1,6 @@
 body {
   margin: 0;
   background: skyblue;
-  /*background-image: url("yo.jpg");*/
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-position: center;
@@ -9,4 +8,10 @@ body {
 }
 .canvas {
   position: relative;
+}
+@media (orientation: portrait) {
+  body {
+    margin: 0;
+    background-size: 80% auto;
+  }
 }
