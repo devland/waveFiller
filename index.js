@@ -1,4 +1,4 @@
-function filler(options) {
+function waveFiller(options) {
   this.threshold = options.threshold || 20; // maximum deviance in color channell value allowed for a pixel to be considered blank
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
@@ -8,97 +8,95 @@ function filler(options) {
   this.minWorkerLoad = options.minWorkerLoad || 500; // minimum number of shore pixels, if more are available, to be assigned to a web worker
   this.computeAhead = options.computeAhead; // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
   this.libraryPath = options.libraryPath || './' // path to library directory relative to current context
+  this.silent = options.silent // set to true to disable console logs
   const frameTime = 1000 / this.fps;
   let skipFrame = false;
-  this.initialize = async () => {
-    this.canvas = document.getElementById(options.canvasId);
-    this.context = this.canvas.getContext('2d');
-    this.paint(options.fit.width, options.fit.height, options.fit.resize);
-    this.canvas.onclick = (event) => {
-      this.click(event.clientX, event.clientY);
-    }
-  }
-  this.paint = (width, height, resize) => { // paint image in canvas
-    this.image = new Image();
-    this.image.src = options.imageSrc;
-    this.image.onload = async () => {
+  this.initialize = () => {
+    return new Promise (async (resolve, reject) => {
       try {
-        let resized;
-        if (width) {
-          height = this.image.height / this.image.width * width;
-        }
-        else if (height) {
-          width = this.image.width / this.image.height * height;
-        }
-        else {
-          resized = this.fit();
-          width = resized.width;
-          height = resized.height;
-        }
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
-        this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        if (resize) {
-          resized = this.fit();
-          this.canvas.style.width = resized.width;
-          this.canvas.style.height = resized.height;
-        }
-        if (this.canvas.offsetWidth < window.innerWidth)
-          this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
-        if (this.canvas.offsetHeight < window.innerHeight)
-          this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
-        this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
-        this.workers = [];
-        this.worked = 0;
-        const workerBlob = await (await fetch(`${options.libraryPath}worker.js`)).blob();
-        for (let index = 0; index < this.workerCount; index++) {
-          const worker = new Worker(URL.createObjectURL(workerBlob));
-          worker.working = false;
-          worker.onmessage = (message) => {
-            switch (message.data.status) {
-              case 'initDone':
-                this.worked++;
-                if (this.worked == this.workerCount) {
-                  console.log(`web worker init done; ${this.worked} web workers ready`);
-                }
-              break;
-              case 'done':
-                this.handleWorkerDone(message.data.output);
-              break;
+        this.canvas = document.getElementById(options.canvasId);
+        this.context = this.canvas.getContext('2d');
+        let width = options.fit.width;
+        let height = options.fit.height;
+        let resize = options.fit.resize;
+        this.image = new Image();
+        this.image.src = options.imageSrc;
+        this.image.onload = async () => {
+          let resized;
+          if (width) {
+            height = this.image.height / this.image.width * width;
+          }
+          else if (height) {
+            width = this.image.width / this.image.height * height;
+          }
+          else {
+            resized = this.fit();
+            width = resized.width;
+            height = resized.height;
+          }
+          this.canvas.width = width;
+          this.canvas.height = height;
+          this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+          this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+          if (resize) {
+            resized = this.fit();
+            this.canvas.style.width = resized.width;
+            this.canvas.style.height = resized.height;
+          }
+          if (this.canvas.offsetWidth < window.innerWidth)
+            this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
+          if (this.canvas.offsetHeight < window.innerHeight)
+            this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
+          this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
+          this.workers = [];
+          let initialized = 0;
+          const workerBlob = await (await fetch(`${options.libraryPath}worker.js`)).blob();
+          for (let index = 0; index < this.workerCount; index++) {
+            const worker = new Worker(URL.createObjectURL(workerBlob));
+            worker.working = false;
+            worker.onmessage = (message) => {
+              switch (message.data.status) {
+                case 'initDone':
+                  initialized++;
+                  if (initialized == this.workerCount) {
+                    this.log(`web worker init done; ${initialized} web workers ready`);
+                    resolve(initialized);
+                  }
+                break;
+                case 'done':
+                  this.handleWorkerDone(message.data.output);
+                break;
+              }
             }
-          }
-          worker.onerror = (error) => {
-            console.log(`worker ${index} error`);
-            console.log(error);
-          }
-          worker.onmessageerror = (error) => {
-            console.log(`worker ${index} message error`);
-            console.log(error);
-          }
-          worker.postMessage({
-            type: 'init',
-            input: {
-              index,
-              threshold: this.threshold,
-              blank: this.blank,
-              pixel: this.pixel,
-              radius: this.radius,
-              width: this.canvas.width,
-              height: this.canvas.height,
-              pixels: this.pixels.data,
-              done: {}
+            worker.onerror = (error) => {
+              this.log([`worker ${index} error`, error]);
             }
-          });
-          this.workers.push(worker);
+            worker.onmessageerror = (error) => {
+              this.log([`worker ${index} message error`, error]);
+            }
+            worker.postMessage({
+              type: 'init',
+              input: {
+                index,
+                threshold: this.threshold,
+                blank: this.blank,
+                pixel: this.pixel,
+                radius: this.radius,
+                width: this.canvas.width,
+                height: this.canvas.height,
+                pixels: this.pixels.data,
+                done: {}
+              }
+            });
+            this.workers.push(worker);
+          }
         }
       }
       catch (error) {
-        console.log('initialize error');
-        console.log(error);
+        this.log(['initialize error', error]);
       }
-    }
+    });
   }
   this.fit = () => { // resize image to fit canvas
     let width;
@@ -242,7 +240,8 @@ function filler(options) {
     currentFrame = this.frames[this.frame];
     if (!currentFrame?.shore.length) { // animation done
       this.end = window.performance.now();
-      console.log(`done in ${this.end - this.start} ms`);
+      this.runTime = this.end - this.start;
+      this.log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
       this.locked = false;
     }
     else {
@@ -256,20 +255,35 @@ function filler(options) {
     }
     window.requestAnimationFrame(this.checkFrameReady);
   }
-  this.click = (x, y) => {
+  this.fill = (x, y) => {
     if (this.locked) {
-      console.log('> nope; locked.');
+      this.log('locked; already running');
       return;
     }
     this.locked = true;
     this.frame = 0;
     this.frames = {};
-    x = Math.floor((x - this.canvas.offsetLeft) * this.canvasScale);
-    y = Math.floor((y - this.canvas.offsetTop) * this.canvasScale);
     this.createFrame(this.frame);
     this.frames[this.frame].shore = [[x, y]];
     this.start = window.performance.now();
     this.computeNextFrame();
     this.assignWork();
+  }
+  this.click = (x, y) => { // computes x, y click event coordinates relative to canvas pixels
+    x = Math.floor((x - this.canvas.offsetLeft) * this.canvasScale);
+    y = Math.floor((y - this.canvas.offsetTop) * this.canvasScale);
+    this.fill(x, y);
+  }
+  this.log = (input) => {
+    if (options.silent) {
+      return;
+    }
+    const isArray = Array.isArray(input);
+    console.log(`waveFiller: ${!isArray ? input : ''}`);
+    if (isArray) {
+      for (let i = 0; i < input.length; i++) {
+        console.log(input[i]);
+      }
+    }
   }
 }

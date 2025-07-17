@@ -4,13 +4,13 @@
     <link rel="stylesheet" type="text/css" href="default.css">
     <script type="text/javascript" src="../index.js"></script>
     <script type="text/javascript">
-      const bucket = new filler({
+      const bucket = new waveFiller({
         canvasId: 'canvas',
         imageSrc: 'maze.png',
         threshold: 60, // maximum deviance in color channell value allowed for a pixel to be considered blank
         blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
         pixel: [255, 0, 0, 50], // red - set it to whatever fill color you want as RGBA
-        radius: 50, // wave size in pixels rendered per frame
+        radius: 10, // wave size in pixels rendered per frame
         fps: 60, // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
         fit: {
           width: 800, // this will be the actual canvas width; height will be calculated relative to this width
@@ -20,10 +20,20 @@
         workerCount: 6, // number of web workers to be used
         minWorkerLoad: 500, // minimum number of shore pixels, if more are available, to be assigned to a web worker
         computeAhead: true, // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
-        libraryPath: '../' // path to library directory relative to current context
+        libraryPath: '../', // path to library directory relative to current context
+        silent: false // set to true to disable console logs
       });
       window.addEventListener("load", () => {
-        bucket.initialize();
+        bucket.initialize()
+          .then((result) => {
+            console.log(`yep, ${result} workers are ready :)`);
+            bucket.canvas.onclick = (event) => {
+              bucket.click(event.clientX, event.clientY);
+            }
+          })
+          .catch((error) => {
+            console.log('oops; error...');
+          });
       });
     </script>
   </head>
