@@ -1,7 +1,11 @@
 body {
   margin: 0;
   background: skyblue;
-  background-image: url("big.jpg");
+  /*background-image: url("yo.jpg");*/
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+  background-size: auto 80%;
 }
 .canvas {
   position: relative;

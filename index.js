@@ -39,16 +39,10 @@ function waveFiller(options) {
           this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
           this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-          if (resize) {
-            resized = this.fit();
-            this.canvas.style.width = resized.width;
-            this.canvas.style.height = resized.height;
-          }
-          if (this.canvas.offsetWidth < window.innerWidth)
-            this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
-          if (this.canvas.offsetHeight < window.innerHeight)
-            this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
           this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
+          if (resize) {
+            this.resize();
+          }
           this.workers = [];
           let initialized = 0;
           const workerBlob = await (await fetch(`${options.libraryPath}worker.js`)).blob();
@@ -118,6 +112,14 @@ function waveFiller(options) {
       }
     }
     return { width, height };
+  }
+  this.resize = () => {
+    const resized = this.fit();
+    this.canvas.style.width = resized.width;
+    this.canvas.style.height = resized.height;
+    this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
+    this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
+    this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
   }
   this.putPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;

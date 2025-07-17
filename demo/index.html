@@ -11,19 +11,20 @@
         blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
         pixel: [255, 0, 0, 50], // red - set it to whatever fill color you want as RGBA
         radius: 50, // wave size in pixels rendered per frame
-        fps: 60, // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
+        fps: 30, // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
         fit: {
-          width: 800, // this will be the actual canvas width; height will be calculated relative to this width
+          width: 600, // this will be the actual canvas width; height will be calculated relative to this width
           height: null, // if set height will overwrite width as the dimension for resize reference; width will be calculated relative to this height
-          resize: true // if true canvas style size will fit the screen; rendered pixel size will not change
+          resize: true // if true canvas style size and position will fit the screen; rendered pixel size will not change
         },
-        workerCount: 6, // number of web workers to be used
+        workerCount: 4, // number of web workers to be used
         minWorkerLoad: 500, // minimum number of shore pixels, if more are available, to be assigned to a web worker
         computeAhead: true, // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
         libraryPath: '../', // path to library directory relative to current context
         silent: false // set to true to disable console logs
       });
       window.addEventListener("load", () => {
+        document.body.style.backgroundImage = 'url("yo.jpg")';
         bucket.initialize()
           .then((result) => {
             console.log(`yep, ${result} workers are ready :)`);
@@ -34,6 +35,9 @@
           .catch((error) => {
             console.log('oops; error...');
           });
+      });
+      window.addEventListener("resize", () => {
+        bucket.resize();
       });
     </script>
   </head>
