@@ -11,7 +11,6 @@ body {
 }
 @media (orientation: portrait) {
   body {
-    margin: 0;
     background-size: 80% auto;
   }
 }
