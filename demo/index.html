@@ -24,9 +24,9 @@
         silent: false // set to true to disable console logs
       });
       window.addEventListener("load", () => {
-        document.body.style.backgroundImage = 'url("yo.jpg")';
         bucket.initialize()
           .then((result) => {
+            document.body.style.backgroundImage = 'url("yo.jpg")';
             console.log(`yep, ${result} workers are ready :)`);
             bucket.canvas.onclick = (event) => {
               bucket.click(event.clientX, event.clientY);
