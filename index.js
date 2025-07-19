@@ -86,6 +86,23 @@ function waveFiller(options) {
       }
     });
   }
+  this.clearWorkers = () => {
+    for (let i = 0; i < this.workerCount; i++) {
+      this.workers[i].postMessage({
+        type: 'init',
+        input: {
+          threshold: this.threshold,
+          blank: this.blank,
+          pixel: this.pixel,
+          radius: this.radius,
+          width: this.canvas.width,
+          height: this.canvas.height,
+          pixels: this.pixels.data,
+          done: {}
+        }
+      });
+    }
+  }
   this.putPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;
     this.pixels.data[start] = this.pixel[0];
