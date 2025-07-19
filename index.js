@@ -11,6 +11,8 @@ function waveFiller(options) {
   this.silent = options.silent // set to true to disable console logs
   const frameTime = 1000 / this.fps;
   let skipFrame = false;
+  let fillResolve = () => {}
+  let fillReject = () => {}
   this.initialize = () => {
     return new Promise ((resolve, reject) => {
       this.canvas = document.getElementById(options.canvasId);
@@ -54,11 +56,11 @@ function waveFiller(options) {
             }
             worker.onerror = (error) => {
               log([`worker ${index} error`, error]);
-              this.fillReject(error);
+              fillReject(error);
             }
             worker.onmessageerror = (error) => {
               log([`worker ${index} message error`, error]);
-              this.fillReject(error);
+              fillReject(error);
             }
             worker.postMessage({
               type: 'init',
@@ -208,7 +210,7 @@ function waveFiller(options) {
       this.runTime = this.end - this.start;
       log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
       this.locked = false;
-      this.fillResolve();
+      fillResolve();
     }
     else {
       computeNextFrame();
@@ -228,8 +230,8 @@ function waveFiller(options) {
         resolve();
         return;
       }
-      this.fillResolve = resolve;
-      this.fillReject = reject;
+      fillResolve = resolve;
+      fillReject = reject;
       this.locked = true;
       this.frame = 0;
       this.frames = {};
