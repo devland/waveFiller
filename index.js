@@ -18,31 +18,20 @@ function waveFiller(options) {
         this.context = this.canvas.getContext('2d');
         let width = options.fit.width;
         let height = options.fit.height;
-        let resize = options.fit.resize;
         this.image = new Image();
         this.image.src = options.imageSrc;
         this.image.onload = async () => {
-          let resized;
           if (width) {
             height = this.image.height / this.image.width * width;
           }
           else if (height) {
             width = this.image.width / this.image.height * height;
           }
-          else {
-            resized = this.fit();
-            width = resized.width;
-            height = resized.height;
-          }
           this.canvas.width = width;
           this.canvas.height = height;
           this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
           this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-          this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
-          if (resize) {
-            this.resize();
-          }
           this.workers = [];
           let initialized = 0;
           const workerBlob = await (await fetch(`${options.libraryPath}worker.js`)).blob();
@@ -91,35 +80,6 @@ function waveFiller(options) {
         this.log(['initialize error', error]);
       }
     });
-  }
-  this.fit = () => { // resize image to fit canvas
-    let width;
-    let height;
-    if (this.image.width >= this.image.height) {
-      width = this.image.width > window.innerWidth ? window.innerWidth : this.image.width;
-      height = parseInt(this.image.height / this.image.width * width);
-      if (height > window.innerHeight) {
-        height = window.innerHeight;
-        width = parseInt(this.image.width / this.image.height * height);
-      }
-    }
-    else {
-      height = this.image.height > window.innerHeight ? window.innerHeight : this.image.height;
-      width = parseInt(this.image.width / this.image.height * height);
-      if (width > window.innerWidth) {
-        width = window.innerWidth;
-        height = parseInt(this.image.height / this.image.width * width);
-      }
-    }
-    return { width, height };
-  }
-  this.resize = () => {
-    const resized = this.fit();
-    this.canvas.style.width = resized.width;
-    this.canvas.style.height = resized.height;
-    this.canvas.style.left = (window.innerWidth - this.canvas.offsetWidth) / 2 + 'px';
-    this.canvas.style.top = (window.innerHeight - this.canvas.offsetHeight) / 2 + 'px';
-    this.canvasScale = this.canvas.width / this.canvas.offsetWidth;
   }
   this.putPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;
@@ -272,8 +232,9 @@ function waveFiller(options) {
     this.assignWork();
   }
   this.click = (x, y) => { // computes x, y click event coordinates relative to canvas pixels
-    x = Math.floor((x - this.canvas.offsetLeft) * this.canvasScale);
-    y = Math.floor((y - this.canvas.offsetTop) * this.canvasScale);
+    const canvasScale = this.canvas.width / this.canvas.offsetWidth;
+    x = Math.floor((x - this.canvas.offsetLeft) * canvasScale);
+    y = Math.floor((y - this.canvas.offsetTop) * canvasScale);
     this.fill(x, y);
   }
   this.log = (input) => {
