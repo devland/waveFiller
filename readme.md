@@ -1,17 +1,15 @@
-A animated bucket fill effect for the HTML 5 canvas.  
+An animated bucket fill effect for the HTML 5 canvas.  
 Written in javascript and optimized via web workers.  
 
-For a live demo go to https://devland.github.io/waveFiller/demo/ and click on the white image areas to trigger the bucket fill animation.  
+For a live demo go to https://devland.github.io/waveFiller/demo/ and click within the empty image areas to trigger the bucket fill animation.  
 
 # SETUP
 
-Create an HTML page with a canvas and load the waveFiller library like below.  
+0. Create an HTML page with a canvas and load the waveFiller library like below.  
 Refer to the [demo/index.html](demo/index.html) file for a working example.  
 ```html
 <html>
   <head>
-    <title>waveFiller demo</title>
-    <link rel="stylesheet" type="text/css" href="default.css">
     <script type="text/javascript" src="waveFiller/index.js"></script>
   </head>
   <body>
@@ -19,9 +17,9 @@ Refer to the [demo/index.html](demo/index.html) file for a working example.
   </body>
 </html>
 ```
-Instantiate the library.  
+1. Instantiate the library.  
 ```javascript
-const bucket = new waveFiller({ // instantiate the library
+const bucket = new waveFiller({
   canvasId: 'canvas', // canvad DOM id to be used
   imageSrc: 'maze.png', // image to render in the canvas
   threshold: 60, // maximum deviance in color channell value allowed for a pixel to be considered blank
@@ -40,7 +38,7 @@ const bucket = new waveFiller({ // instantiate the library
   silent: false // set to true to disable console logs
 });
 ```
-Initialize the library.  
+2. Initialize the library.  
 ```javascript
 window.addEventListener("load", () => {
   bucket.initialize() // initialize the library and its web workers once the page finishes loading
@@ -55,7 +53,7 @@ window.addEventListener("load", () => {
 });
 ```
 Now you can click within the canvas to trigger the animated bucket fill effect.  
-Optionally you can trigger the effect programatically by using the `fill` method like below.  
+3. Optionally you can trigger the effect programatically by using the `fill` method like below.  
 ```javascript
 window.addEventListener("load", () => {
   bucket.initialize() // initialize the library and its web workers once the page finishes loading
