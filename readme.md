@@ -59,11 +59,11 @@ window.addEventListener("load", async () => {
   console.log('yep; fill is done');
 });
 ```
-4. Remember to run the `clearWorkers` function if you change the instance settings so that the workers will run with them.  
+4. Remember to run the `updateWorkers` function if you change the instance settings so that the workers will run with them.  
 For example, to change the `blank` and `pixel` values run the code below.  
 ```javascript
 bucket.blank=[ 255, 0, 0, 50 ];
 bucket.pixel=[ 255, 255, 255, 255 ];
-bucket.clearWorkers();
+bucket.updateWorkers();
 ```
 [Screencast_20250719_140122.webm](https://github.com/user-attachments/assets/e1ea5432-14af-408d-a87a-9c4466153425)

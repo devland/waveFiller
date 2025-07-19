@@ -86,7 +86,7 @@ function waveFiller(options) {
       }
     });
   }
-  this.clearWorkers = () => {
+  this.updateWorkers = () => {
     for (let i = 0; i < this.workerCount; i++) {
       this.workers[i].postMessage({
         type: 'init',
