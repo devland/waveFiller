@@ -40,29 +40,23 @@ const bucket = new waveFiller({
 ```
 2. Initialize the library.  
 ```javascript
-window.addEventListener("load", () => {
-  bucket.initialize() // initialize the library and its web workers once the page finishes loading
-    .then((result) => {
-      bucket.canvas.onclick = (event) => { // attach a click event to trigger the fill animation after initialization is complete
-        bucket.click(event.clientX, event.clientY);
-      }
-    })
-    .catch((error) => {
-      console.log('oops; error...');
-    });
+window.addEventListener("load", async () => {
+  const workerCount = await bucket.initialize();
+  console.log(`yep, ${workerCount} workers are ready :)`);
+  bucket.canvas.onclick = async (event) => {
+    await bucket.click(event.clientX, event.clientY);
+    console.log('yep; click fill is done');
+  }
 });
 ```
 Now you can click within the canvas to trigger the animated bucket fill effect.  
 3. Optionally you can trigger the effect programatically by using the `fill` method like below.  
 ```javascript
-window.addEventListener("load", () => {
-  bucket.initialize() // initialize the library and its web workers once the page finishes loading
-    .then((result) => {
-      bucket.fill(50, 50); // trigger the effect from the provided (x, y) coordinates within the canvas
-    })
-    .catch((error) => {
-      console.log('oops; error...');
-    });
+window.addEventListener("load", async () => {
+  const workerCount = await bucket.initialize();
+  console.log(`yep, ${workerCount} workers are ready :)`);
+  await bucket.fill(50, 50);
+  console.log('yep; fill is done');
 });
 ```
 [Screencast_20250719_140122.webm](https://github.com/user-attachments/assets/e1ea5432-14af-408d-a87a-9c4466153425)

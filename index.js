@@ -12,15 +12,15 @@ function waveFiller(options) {
   const frameTime = 1000 / this.fps;
   let skipFrame = false;
   this.initialize = () => {
-    return new Promise (async (resolve, reject) => {
-      try {
-        this.canvas = document.getElementById(options.canvasId);
-        this.context = this.canvas.getContext('2d');
-        let width = options.fit.width;
-        let height = options.fit.height;
-        this.image = new Image();
-        this.image.src = options.imageSrc;
-        this.image.onload = async () => {
+    return new Promise ((resolve, reject) => {
+      this.canvas = document.getElementById(options.canvasId);
+      this.context = this.canvas.getContext('2d');
+      let width = options.fit.width;
+      let height = options.fit.height;
+      this.image = new Image();
+      this.image.src = options.imageSrc;
+      this.image.onload = async () => {
+        try {
           if (width) {
             height = this.image.height / this.image.width * width;
           }
@@ -54,9 +54,11 @@ function waveFiller(options) {
             }
             worker.onerror = (error) => {
               log([`worker ${index} error`, error]);
+              this.fillReject(error);
             }
             worker.onmessageerror = (error) => {
               log([`worker ${index} message error`, error]);
+              this.fillReject(error);
             }
             worker.postMessage({
               type: 'init',
@@ -75,9 +77,10 @@ function waveFiller(options) {
             this.workers.push(worker);
           }
         }
-      }
-      catch (error) {
-        log(['initialize error', error]);
+        catch (error) {
+          log(['initialize error', error]);
+          reject(error);
+        }
       }
     });
   }
@@ -205,6 +208,7 @@ function waveFiller(options) {
       this.runTime = this.end - this.start;
       log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
       this.locked = false;
+      this.fillResolve();
     }
     else {
       computeNextFrame();
@@ -218,24 +222,29 @@ function waveFiller(options) {
     window.requestAnimationFrame(checkFrameReady);
   }
   this.fill = (x, y) => {
-    if (this.locked) {
-      log('locked; already running');
-      return;
-    }
-    this.locked = true;
-    this.frame = 0;
-    this.frames = {};
-    createFrame(this.frame);
-    this.frames[this.frame].shore = [[x, y]];
-    this.start = window.performance.now();
-    computeNextFrame();
-    assignWork();
+    return new Promise ((resolve, reject) => {
+      if (this.locked) {
+        log('locked; already running');
+        resolve();
+        return;
+      }
+      this.fillResolve = resolve;
+      this.fillReject = reject;
+      this.locked = true;
+      this.frame = 0;
+      this.frames = {};
+      createFrame(this.frame);
+      this.frames[this.frame].shore = [[x, y]];
+      this.start = window.performance.now();
+      computeNextFrame();
+      assignWork();
+    });
   }
   this.click = (x, y) => { // computes x, y click event coordinates relative to canvas pixels
     const canvasScale = this.canvas.width / this.canvas.offsetWidth;
     x = Math.floor((x - this.canvas.offsetLeft) * canvasScale);
     y = Math.floor((y - this.canvas.offsetTop) * canvasScale);
-    this.fill(x, y);
+    return this.fill(x, y);
   }
   log = (input) => {
     if (options.silent) {

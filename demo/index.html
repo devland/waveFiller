@@ -28,11 +28,19 @@
             document.body.style.backgroundImage = 'url("yo.jpg")';
             console.log(`yep, ${result} workers are ready :)`);
             bucket.canvas.onclick = (event) => {
-              bucket.click(event.clientX, event.clientY);
+              bucket.click(event.clientX, event.clientY)
+                .then(() => {
+                  console.log('yep; click fill is done');
+                })
+                .catch((error) => {
+                  console.log('fill error');
+                  console.log(error);
+                });
             }
           })
           .catch((error) => {
-            console.log('oops; error...');
+            console.log('oops; initialize error...');
+            console.log(error);
           });
       });
     </script>
