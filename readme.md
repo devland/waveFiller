@@ -50,7 +50,7 @@ window.addEventListener("load", async () => {
 });
 ```
 Now you can click within the canvas to trigger the animated bucket fill effect.  
-3. Optionally you can trigger the effect programatically by using the `fill` method like below.  
+3. Optionally, you can trigger the effect programatically by using the `fill` method like below.  
 ```javascript
 window.addEventListener("load", async () => {
   const workerCount = await bucket.initialize();
@@ -60,10 +60,13 @@ window.addEventListener("load", async () => {
 });
 ```
 4. Remember to run the `updateWorkers` function if you change the instance settings so that the workers will run with them.  
-For example, to change the `blank` and `pixel` values run the code below.  
+For example, to change the `blank` and `pixel` values run the function below.  
 ```javascript
-bucket.blank = [ 255, 0, 0, 50 ];
-bucket.pixel = [ 255, 255, 255, 255 ];
-bucket.updateWorkers();
+const changeColors = async () => {
+  bucket.blank = [ 255, 0, 0, 50 ];
+  bucket.pixel = [ 255, 255, 255, 255 ];
+  await bucket.updateWorkers();
+  console.log('colors have been changed');
+}
 ```
 [Screencast_20250719_140122.webm](https://github.com/user-attachments/assets/e1ea5432-14af-408d-a87a-9c4466153425)

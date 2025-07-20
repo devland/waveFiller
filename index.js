@@ -11,8 +11,11 @@ function waveFiller(options) {
   this.silent = options.silent // set to true to disable console logs
   const frameTime = 1000 / this.fps;
   let skipFrame = false;
-  let fillResolve = () => {}
-  let fillReject = () => {}
+  const workerPromise = {
+    resolve: () => {},
+    reject: () => {},
+    count: 0
+  }
   this.initialize = () => {
     return new Promise ((resolve, reject) => {
       this.canvas = document.getElementById(options.canvasId);
@@ -35,7 +38,8 @@ function waveFiller(options) {
           this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
           this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
           this.workers = [];
-          let initialized = 0;
+          workerPromise.resolve = resolve;
+          workerPromise.reject = reject;
           const workerBlob = await (await fetch(`${options.libraryPath}worker.js`)).blob();
           for (let index = 0; index < this.workerCount; index++) {
             const worker = new Worker(URL.createObjectURL(workerBlob));
@@ -43,10 +47,11 @@ function waveFiller(options) {
             worker.onmessage = (message) => {
               switch (message.data.status) {
                 case 'initDone':
-                  initialized++;
-                  if (initialized == this.workerCount) {
-                    log(`web worker init done; ${initialized} web workers ready`);
-                    resolve(initialized);
+                  workerPromise.count++;
+                  if (workerPromise.count == this.workerCount) {
+                    log(`web worker init done; ${workerPromise.count} web workers ready`);
+                    workerPromise.resolve(workerPromise.count);
+                    workerPromise.count = 0;
                   }
                 break;
                 case 'done':
@@ -56,11 +61,11 @@ function waveFiller(options) {
             }
             worker.onerror = (error) => {
               log([`worker ${index} error`, error]);
-              fillReject(error);
+              workerPromise.reject(error);
             }
             worker.onmessageerror = (error) => {
               log([`worker ${index} message error`, error]);
-              fillReject(error);
+              workerPromise.reject(error);
             }
             worker.postMessage({
               type: 'init',
@@ -87,21 +92,25 @@ function waveFiller(options) {
     });
   }
   this.updateWorkers = () => {
-    for (let i = 0; i < this.workerCount; i++) {
-      this.workers[i].postMessage({
-        type: 'init',
-        input: {
-          threshold: this.threshold,
-          blank: this.blank,
-          pixel: this.pixel,
-          radius: this.radius,
-          width: this.canvas.width,
-          height: this.canvas.height,
-          pixels: this.pixels.data,
-          done: {}
-        }
-      });
-    }
+    return new Promise((resolve, reject) => {
+      workerPromise.resolve = resolve;
+      workerPromise.reject = reject;
+      for (let i = 0; i < this.workerCount; i++) {
+        this.workers[i].postMessage({
+          type: 'init',
+          input: {
+            threshold: this.threshold,
+            blank: this.blank,
+            pixel: this.pixel,
+            radius: this.radius,
+            width: this.canvas.width,
+            height: this.canvas.height,
+            pixels: this.pixels.data,
+            done: {}
+          }
+        });
+      }
+    });
   }
   this.putPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;
@@ -227,7 +236,7 @@ function waveFiller(options) {
       this.runTime = this.end - this.start;
       log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
       this.locked = false;
-      fillResolve();
+      workerPromise.resolve();
     }
     else {
       computeNextFrame();
@@ -247,8 +256,8 @@ function waveFiller(options) {
         resolve();
         return;
       }
-      fillResolve = resolve;
-      fillReject = reject;
+      workerPromise.resolve = resolve;
+      workerPromise.reject = reject;
       this.locked = true;
       this.frame = 0;
       this.frames = {};
