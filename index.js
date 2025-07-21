@@ -1,5 +1,5 @@
 function waveFiller(options) {
-  this.threshold = options.threshold || 20; // maximum deviance in color channell value allowed for a pixel to be considered blank
+  this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
   this.radius = options.radius || 50; // wave size in pixels rendered per frame

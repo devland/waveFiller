@@ -22,7 +22,7 @@ Refer to the [demo/index.html](demo/index.html) file for a working example.
 const bucket = new waveFiller({
   canvasId: 'canvas', // canvad DOM id to be used
   imageSrc: 'maze.png', // image to render in the canvas
-  threshold: 60, // maximum deviance in color channell value allowed for a pixel to be considered blank
+  threshold: 60, // maximum deviance in color channel value allowed for a pixel to be considered blank
   blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
   pixel: [255, 0, 0, 50], // red - set it to whatever fill color you want as RGBA
   radius: 50, // wave size in pixels rendered per frame
