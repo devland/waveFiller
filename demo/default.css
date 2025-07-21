@@ -8,17 +8,9 @@ body {
 }
 .canvas {
   position: relative;
-  height: 100vh;
-  left: calc(50vw - 50vh);
 }
 @media (orientation: portrait) {
   body {
     background-size: 80% auto;
-  }
-  .canvas {
-    width: 100vw;
-    height: auto;
-    top: calc(50vh - 50vw);
-    left: 0;
   }
 }

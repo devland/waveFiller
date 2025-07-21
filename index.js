@@ -91,6 +91,36 @@ function waveFiller(options) {
       }
     });
   }
+  this.fit = (maxWidth, maxHeight) => { // compute canvas size to fit within given max dimensions
+    let width;
+    let height;
+    if (this.image.width >= this.image.height) {
+      width = this.image.width > maxWidth ? maxWidth : this.image.width;
+      height = parseInt(this.image.height / this.image.width * width);
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = parseInt(this.image.width / this.image.height * height);
+      }
+    }
+    else {
+      height = this.image.height > maxHeight ? maxHeight : this.image.height;
+      width = parseInt(this.image.width / this.image.height * height);
+      if (width > maxWidth) {
+        width = maxWidth;
+        height = parseInt(this.image.height / this.image.width * width);
+      }
+    }
+    return { width, height };
+  }
+  this.resize = (maxWidth, maxHeight, center) => {
+    const resized = this.fit(maxWidth, maxHeight);
+    this.canvas.style.width = resized.width;
+    this.canvas.style.height = resized.height;
+    if (center) {
+      this.canvas.style.left = (maxWidth - this.canvas.offsetWidth) / 2 + 'px';
+      this.canvas.style.top = (maxHeight - this.canvas.offsetHeight) / 2 + 'px';
+    }
+  }
   this.updateWorkers = () => {
     return new Promise((resolve, reject) => {
       workerPromise.resolve = resolve;
