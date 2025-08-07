@@ -1,0 +1,15 @@
+{
+  "name": "waveFiller",
+  "version": "1.0",
+  "description": "An animated bucket fill effect for the HTML 5 canvas.",
+  "author": {
+    "name": "Andrei Busuioc",
+    "email": "adevland@gmail.com",
+    "url": "https://github.com/devland"
+  },
+  "license": "GPL-3.0",
+  "repository": {
+    "url": "https://github.com/devland/waveFiller",
+    "type": "git"
+  }
+}
