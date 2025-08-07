@@ -1,3 +1,5 @@
+![image](waveFiller.png)
+
 An animated bucket fill effect for the HTML 5 canvas.  
 Written in javascript and optimized via web workers.  
 
