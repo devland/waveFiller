@@ -1,15 +1,27 @@
 {
-  "name": "waveFiller",
-  "version": "1.0",
+  "name": "wavefiller",
+  "version": "1.0.0",
   "description": "An animated bucket fill effect for the HTML 5 canvas.",
-  "author": {
-    "name": "Andrei Busuioc",
-    "email": "adevland@gmail.com",
-    "url": "https://github.com/devland"
+  "keywords": [
+    "html",
+    "canvas",
+    "animated",
+    "bucket",
+    "fill"
+  ],
+  "homepage": "https://github.com/devland/waveFiller#readme",
+  "bugs": {
+    "url": "https://github.com/devland/waveFiller/issues"
+  },
+  "repository": {
+    "url": "git+https://github.com/devland/waveFiller.git",
+    "type": "git"
   },
   "license": "GPL-3.0",
-  "repository": {
-    "url": "https://github.com/devland/waveFiller",
-    "type": "git"
+  "author": "Andrei Busuioc <adevland@gmail.com> (https://github.com/devland)",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
