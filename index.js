@@ -236,7 +236,7 @@ function waveFiller(options) {
       return;
     }
     const currentFrame = this.frames[this.frame];
-    if (currentFrame.worked == currentFrame.shore.length && (this.frame == 0 || this.frames[this.frame - 1].computed)) {
+    if (currentFrame.worked == currentFrame.shore.length && (this.frame == 0 || this.frames[this.frame - 1].computed)) { // frame done
       const renderTime = window.performance.now() - this.frameStart;
       if (renderTime < frameTime) {
         skipFrame = true;
