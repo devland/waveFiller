@@ -10,10 +10,10 @@
         threshold: 60, // maximum deviance in color channel value allowed for a pixel to be considered blank
         blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
         pixel: [255, 0, 0, 50], // red - set it to whatever fill color you want as RGBA
-        radius: 50, // wave size in pixels rendered per frame
-        fps: 75, // frame limiter; the rendered frames per second will be limited to approximately this value; actual fps can be lower depending on your CPU
+        radius: 20, // wave size in pixels rendered per frame
+        fps: 60, // frame limiter (set to 0 to disable); actual fps can be lower depending on your CPU
         fit: {
-          width: 600, // this will be the actual canvas width; height will be calculated relative to this width
+          width: 900, // this will be the actual canvas width; height will be calculated relative to this width
           height: null // if set height will overwrite width as the dimension for resize reference; width will be calculated relative to this height
         },
         workerCount: 4, // number of web workers to be used
