@@ -1,6 +1,6 @@
 {
   "name": "wavefiller",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "An animated bucket fill effect for the HTML 5 canvas.",
   "keywords": [
     "html",
