@@ -2,16 +2,18 @@ function waveFiller(options) {
   this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
-  this.radius = options.radius || 50; // wave size in pixels rendered per frame
-  this.fps = options.fps || 0; // frame limiter (set to 0 to disable); actual fps can be lower depending on your CPU
+  this.radius = options.radius || 20; // wave size in pixels rendered per frame
+  this.fps = options.fps ?? 60; // frame limiter (set to 0 to disable); actual fps can be lower depending on your CPU
   this.workerCount = options.workerCount || Math.floor(window.navigator.hardwareConcurrency / 2); // number of web workers to be used
-  this.minWorkerLoad = options.minWorkerLoad || 500; // minimum number of shore pixels, if more are available, to be assigned to a web worker
+  this.minWorkerLoad = options.minWorkerLoad || 100; // minimum number of shore pixels, if more are available, to be assigned to a web worker
+  this.maxWorkerLoad = options.maxWorkerLoad ?? 200; // maximum number of shore pixels to be assigned to a worker (set to 0 to disable)
   this.computeAhead = options.computeAhead; // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
   this.libraryPath = options.libraryPath || './' // path to library directory relative to current context
   this.silent = options.silent // set to true to disable console logs
   const frameTime = this.fps ? 1000 / this.fps : 0;
   let skipTimeDiff = 0;
   let frameStart = 0;
+  let assigningWork = false;
   const workerPromise = {
     resolve: () => {},
     reject: () => {},
@@ -78,8 +80,7 @@ function waveFiller(options) {
                 radius: this.radius,
                 width: this.canvas.width,
                 height: this.canvas.height,
-                pixels: this.pixels.data,
-                done: {}
+                pixels: this.pixels.data
               }
             });
             this.workers.push(worker);
@@ -136,8 +137,7 @@ function waveFiller(options) {
             radius: this.radius,
             width: this.canvas.width,
             height: this.canvas.height,
-            pixels: this.pixels.data,
-            done: {}
+            pixels: this.pixels.data
           }
         });
       }
@@ -179,15 +179,23 @@ function waveFiller(options) {
     return -1;
   }
   const assignWork = () => {
-    const idleFrameIndex = getIdleFrameIndex(this.frame);
-    if (idleFrameIndex < 0) {
+    if (assigningWork) {
       return;
     }
+    const idleFrameIndex = getIdleFrameIndex(this.frame);
     const idleWorkers = getIdleWorkers();
+    if (idleFrameIndex < 0 || !idleWorkers.length) {
+      return;
+    }
+    assigningWork = true;
     let assigned = 0;
     const idleFrame = this.frames[idleFrameIndex];
-    const slice = Math.max(Math.ceil((idleFrame.shore.length - idleFrame.nextIdleShorePixel) / idleWorkers.length), this.minWorkerLoad);
+    let slice = Math.max(Math.ceil((idleFrame.shore.length - idleFrame.nextIdleShorePixel) / idleWorkers.length), this.minWorkerLoad);
+    if (this.maxWorkerLoad && slice > this.maxWorkerLoad) {
+      slice = this.maxWorkerLoad;
+    }
     for (let i = 0; i < idleWorkers.length; i++) {
+      const workerIndex = idleWorkers[i];
       const start = idleFrame.nextIdleShorePixel + slice * i;
       if (start > idleFrame.shore.length) {
         break;
@@ -197,9 +205,9 @@ function waveFiller(options) {
       if (!shore.length) {
         continue;
       }
-      this.workers[i].working = true;
-      this.workers[i].frame = idleFrameIndex;
-      this.workers[i].postMessage({
+      this.workers[workerIndex].working = true;
+      this.workers[workerIndex].frame = idleFrameIndex;
+      this.workers[workerIndex].postMessage({
         type: 'work',
         input: {
           frame: idleFrameIndex,
@@ -209,6 +217,7 @@ function waveFiller(options) {
       assigned += shore.length;
     }
     idleFrame.nextIdleShorePixel += assigned;
+    assigningWork = false;
   }
   const handleWorkerDone = (output) => {
     this.workers[output.index].working = false;
@@ -222,6 +231,9 @@ function waveFiller(options) {
     checkFrameReady();
     if (this.computeAhead) {
       assignWork();
+    }
+    else if (this.maxWorkerLoad && output.frame == this.frame && currentFrame.nextIdleShorePixel < currentFrame.shore.length) {
+      assignWork(this.frame);
     }
   }
   const checkFrameReady = () => {

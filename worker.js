@@ -20,6 +20,13 @@ const getPixel = (x, y) => {
   const start = (y * context.width + x) * 4;
   return context.pixels.slice(start, start + 4);
 }
+const putPixel = (x, y) => {
+  const start = (y * context.width + x) * 4;
+  context.pixels[start] = context.pixel[0];
+  context.pixels[start + 1] = context.pixel[1];
+  context.pixels[start + 2] = context.pixel[2];
+  context.pixels[start + 3] = context.pixel[3];
+}
 const isBlank = (x, y) => {
   const pixel = getPixel(x, y);
   if (Math.abs(context.blank[0] - pixel[0]) <= context.threshold &&
@@ -32,9 +39,9 @@ const isBlank = (x, y) => {
 }
 const doNeighbor = (px, py, withinImage, shorePixel) => {
   const label = `${px}|${py}`;
-  if (!context.done[label] && withinImage && isBlank(px, py)) {
+  if (withinImage && isBlank(px, py)) {
     if (withinRadius(px, py, shorePixel)) {
-      context.done[label] = true;
+      putPixel(px, py);
       context.filled.push([px, py]);
       context.toDoNext.push([px, py]);
     }
