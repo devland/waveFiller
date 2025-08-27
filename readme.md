@@ -72,4 +72,4 @@ const changeColors = async () => {
   console.log('colors have been changed');
 }
 ```
-[Screencast_20250719_140122.webm](https://github.com/user-attachments/assets/e1ea5432-14af-408d-a87a-9c4466153425)
+[waveFillerDemo.webm](https://github.com/user-attachments/assets/1666c09d-dfda-4dfa-9921-8989713baf24)
