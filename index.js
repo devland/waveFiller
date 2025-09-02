@@ -116,8 +116,8 @@ function waveFiller(options) {
   }
   this.resize = (maxWidth, maxHeight, center) => {
     const resized = this.fit(maxWidth, maxHeight);
-    this.canvas.style.width = resized.width;
-    this.canvas.style.height = resized.height;
+    this.canvas.style.width = resized.width+'px';
+    this.canvas.style.height = resized.height+'px';
     if (center) {
       this.canvas.style.left = (maxWidth - this.canvas.offsetWidth) / 2 + 'px';
       this.canvas.style.top = (maxHeight - this.canvas.offsetHeight) / 2 + 'px';
