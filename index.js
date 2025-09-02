@@ -309,8 +309,8 @@ function waveFiller(options) {
   }
   this.click = (x, y) => { // computes x, y click event coordinates relative to canvas pixels
     const canvasScale = this.canvas.width / this.canvas.offsetWidth;
-    x = Math.floor((x - this.canvas.offsetLeft) * canvasScale);
-    y = Math.floor((y - this.canvas.offsetTop) * canvasScale);
+    x = Math.floor((x - this.canvas.getBoundingClientRect().left) * canvasScale);
+    y = Math.floor((y - this.canvas.getBoundingClientRect().top) * canvasScale);
     return this.fill(x, y);
   }
   log = (input) => {
