@@ -97,18 +97,18 @@ function waveFiller(options) {
     let width;
     let height;
     if (this.image.width >= this.image.height) {
-      width = this.image.width > maxWidth ? maxWidth : this.image.width;
+      width = parseInt(this.image.width > maxWidth ? maxWidth : this.image.width);
       height = parseInt(this.image.height / this.image.width * width);
       if (height > maxHeight) {
-        height = maxHeight;
+        height = parseInt(maxHeight);
         width = parseInt(this.image.width / this.image.height * height);
       }
     }
     else {
-      height = this.image.height > maxHeight ? maxHeight : this.image.height;
+      height = parseInt(this.image.height > maxHeight ? maxHeight : this.image.height);
       width = parseInt(this.image.width / this.image.height * height);
       if (width > maxWidth) {
-        width = maxWidth;
+        width = parseInt(maxWidth);
         height = parseInt(this.image.height / this.image.width * width);
       }
     }
@@ -116,11 +116,11 @@ function waveFiller(options) {
   }
   this.resize = (maxWidth, maxHeight, center) => {
     const resized = this.fit(maxWidth, maxHeight);
-    this.canvas.style.width = resized.width+'px';
-    this.canvas.style.height = resized.height+'px';
+    this.canvas.style.width = resized.width + 'px';
+    this.canvas.style.height = resized.height + 'px';
     if (center) {
-      this.canvas.style.left = (maxWidth - this.canvas.offsetWidth) / 2 + 'px';
-      this.canvas.style.top = (maxHeight - this.canvas.offsetHeight) / 2 + 'px';
+      this.canvas.style.left = parseInt((maxWidth - this.canvas.offsetWidth) / 2) + 'px';
+      this.canvas.style.top = parseInt((maxHeight - this.canvas.offsetHeight) / 2) + 'px';
     }
   }
   this.updateWorkers = () => {
