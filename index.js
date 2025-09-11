@@ -93,9 +93,11 @@ function waveFiller(options) {
       }
     });
   }
-  this.fit = (maxWidth, maxHeight) => { // compute canvas size to fit within given max dimensions
+  this.fit = (maxWidth, maxHeight, center) => { // compute canvas size and position to fit within given max dimensions
     let width;
     let height;
+    let left;
+    let top;
     if (this.image.width >= this.image.height) {
       width = parseInt(this.image.width > maxWidth ? maxWidth : this.image.width);
       height = parseInt(this.image.height / this.image.width * width);
@@ -112,15 +114,19 @@ function waveFiller(options) {
         height = parseInt(this.image.height / this.image.width * width);
       }
     }
-    return { width, height };
+    if (center) {
+      left = parseInt((maxWidth - width) / 2);
+      top = parseInt((maxHeight - height) / 2);
+    }
+    return { width, height, left, top };
   }
   this.resize = (maxWidth, maxHeight, center) => {
-    const resized = this.fit(maxWidth, maxHeight);
+    const resized = this.fit(maxWidth, maxHeight, center);
     this.canvas.style.width = resized.width + 'px';
     this.canvas.style.height = resized.height + 'px';
     if (center) {
-      this.canvas.style.left = parseInt((maxWidth - this.canvas.offsetWidth) / 2) + 'px';
-      this.canvas.style.top = parseInt((maxHeight - this.canvas.offsetHeight) / 2) + 'px';
+      this.canvas.style.left = resized.left + 'px';
+      this.canvas.style.top = resized.top + 'px';
     }
   }
   this.updateWorkers = () => {
