@@ -22,7 +22,7 @@ Refer to the [demo/index.html](demo/index.html) file for a working example.
 1. Instantiate the library.  
 ```javascript
 const bucket = new waveFiller({
-  canvas: document.getElementById('canvas'), // canvas DOM element to be used
+  canvas: document.getElementById('canvas'), // canvas DOM element
   imageSrc: 'maze.png', // image to render in the canvas
   threshold: 60, // maximum deviance in color channel value allowed for a pixel to be considered blank
   blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
@@ -43,24 +43,20 @@ const bucket = new waveFiller({
 ```
 2. Initialize the library.  
 ```javascript
-window.addEventListener("load", async () => {
-  const workerCount = await bucket.initialize();
-  console.log(`yep, ${workerCount} workers are ready :)`);
-  bucket.canvas.onclick = async (event) => {
-    await bucket.click(event.clientX, event.clientY);
-    console.log('yep; click fill is done');
-  }
-});
+const workerCount = await bucket.initialize();
+console.log(`yep, ${workerCount} workers are ready :)`);
+bucket.canvas.onclick = async (event) => {
+  await bucket.click(event.clientX, event.clientY);
+  console.log('yep; click fill is done');
+}
 ```
 Now you can click within the canvas to trigger the animated bucket fill effect.  
 3. Optionally, you can trigger the effect programatically by using the `fill` method like below.  
 ```javascript
-window.addEventListener("load", async () => {
-  const workerCount = await bucket.initialize();
-  console.log(`yep, ${workerCount} workers are ready :)`);
-  await bucket.fill(50, 50);
-  console.log('yep; fill is done');
-});
+const workerCount = await bucket.initialize();
+console.log(`yep, ${workerCount} workers are ready :)`);
+await bucket.fill(50, 50);
+console.log('yep; fill is done');
 ```
 4. Remember to run the `updateWorkers` function if you change the instance settings so that the workers will run with them.  
 For example, to change the `blank` and `pixel` values run the function below.  
