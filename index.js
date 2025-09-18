@@ -1,10 +1,13 @@
 "use strict";
 function waveFiller(options) {
+  this.canvas = options.canvas; // canvas DOM element
+  this.imageSrc = options.imageSrc; // image to render in the canvas
   this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
   this.radius = options.radius || 20; // wave size in pixels rendered per frame
   this.fps = options.fps ?? 60; // frame limiter (set to 0 to disable); actual fps can be lower depending on your CPU
+  this.dimensions = options.dimensions;
   this.workerCount = options.workerCount || Math.floor(window.navigator.hardwareConcurrency / 2); // number of web workers to be used
   this.minWorkerLoad = options.minWorkerLoad || 100; // minimum number of shore pixels, if more are available, to be assigned to a web worker
   this.maxWorkerLoad = options.maxWorkerLoad ?? 200; // maximum number of shore pixels to be assigned to a worker (set to 0 to disable)
@@ -22,12 +25,11 @@ function waveFiller(options) {
   }
   this.initialize = () => {
     return new Promise ((resolve, reject) => {
-      this.canvas = options.canvas;
       this.context = this.canvas.getContext('2d');
-      let width = options.fit.width;
-      let height = options.fit.height;
+      let width = this.dimensions.width;
+      let height = this.dimensions.height;
       this.image = new Image();
-      this.image.src = options.imageSrc;
+      this.image.src = this.imageSrc;
       this.image.onload = async () => {
         try {
           if (width) {
