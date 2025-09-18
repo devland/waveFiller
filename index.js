@@ -43,7 +43,7 @@ function waveFiller(options) {
           this.workers = [];
           workerPromise.resolve = resolve;
           workerPromise.reject = reject;
-          const workerBlob = await (await fetch(`${options.libraryPath}worker.js`)).blob();
+          const workerBlob = await (await fetch(`${this.libraryPath}worker.js`)).blob();
           for (let index = 0; index < this.workerCount; index++) {
             const worker = new Worker(URL.createObjectURL(workerBlob));
             worker.working = false;
@@ -321,7 +321,7 @@ function waveFiller(options) {
     return this.fill(x, y);
   }
   log = (input) => {
-    if (options.silent) {
+    if (this.silent) {
       return;
     }
     const isArray = Array.isArray(input);
