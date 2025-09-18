@@ -22,7 +22,7 @@ Refer to the [demo/index.html](demo/index.html) file for a working example.
 1. Instantiate the library.  
 ```javascript
 const bucket = new waveFiller({
-  canvasId: 'canvas', // canvas DOM id to be used
+  canvas: document.getElementById('canvas'), // canvas DOM element to be used
   imageSrc: 'maze.png', // image to render in the canvas
   threshold: 60, // maximum deviance in color channel value allowed for a pixel to be considered blank
   blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image

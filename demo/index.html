@@ -5,7 +5,7 @@
     <script type="text/javascript" src="../index.js"></script>
     <script type="text/javascript">
       const bucket = new waveFiller({
-        canvasId: 'canvas',
+        canvas: document.getElementById('canvas'),
         imageSrc: 'maze.png',
         threshold: 60, // maximum deviance in color channel value allowed for a pixel to be considered blank
         blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image

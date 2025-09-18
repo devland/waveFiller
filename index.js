@@ -21,7 +21,7 @@ function waveFiller(options) {
   }
   this.initialize = () => {
     return new Promise ((resolve, reject) => {
-      this.canvas = document.getElementById(options.canvasId);
+      this.canvas = options.canvas;
       this.context = this.canvas.getContext('2d');
       let width = options.fit.width;
       let height = options.fit.height;
