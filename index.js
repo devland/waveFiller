@@ -1,3 +1,4 @@
+"use strict";
 function waveFiller(options) {
   this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
@@ -320,7 +321,7 @@ function waveFiller(options) {
     y = Math.floor((y - canvasBR.top) * canvasScale);
     return this.fill(x, y);
   }
-  log = (input) => {
+  const log = (input) => {
     if (this.silent) {
       return;
     }
