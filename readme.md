@@ -58,6 +58,7 @@ console.log(`yep, ${workerCount} workers are ready :)`);
 await bucket.fill(50, 50);
 console.log('yep; fill is done');
 ```
+# USAGE
 4. Remember to run the `updateWorkers` function if you change the instance settings so that the workers will run with them.  
 For example, to change the `blank` and `pixel` values run the function below.  
 ```javascript
@@ -66,6 +67,13 @@ const changeColors = async () => {
   bucket.pixel = [ 255, 255, 255, 255 ];
   await bucket.updateWorkers();
   console.log('colors have been changed');
+}
+```
+5. To reset the canvas to the initialized image run the `reset` async method.
+```javascript
+const resetCanvas = async () => {
+  await bucket.reset();
+  console.log('canvas has been reset');
 }
 ```
 [waveFillerDemo.webm](https://github.com/user-attachments/assets/1666c09d-dfda-4dfa-9921-8989713baf24)

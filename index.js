@@ -96,6 +96,18 @@ function waveFiller(options) {
       }
     });
   }
+  this.reset = async () => {
+    try {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+      this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      await this.updateWorkers();
+    }
+    catch (error) {
+      log(['reset error', error]);
+      reject(error);
+    }
+  }
   this.fit = (maxWidth, maxHeight, center) => { // compute canvas size and position to fit within given max dimensions
     let width;
     let height;
