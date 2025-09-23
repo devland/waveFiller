@@ -1,7 +1,7 @@
 ![image](waveFiller.png)
 
-An animated bucket fill effect for the HTML 5 canvas.  
-Written in javascript and optimized via web workers.  
+waveFiller - An animated bucket fill effect for the HTML 5 canvas.  
+Written in vanilla javascript and optimized via web workers.  
 
 For a live demo go to https://devland.github.io/waveFiller/demo/ and click within the empty image areas to trigger the bucket fill animation.  
 
