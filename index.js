@@ -19,10 +19,9 @@ function waveFiller(options) {
   let skipTimeDiff = 0;
   let frameStart = 0;
   let assigningWork = false;
-  const workerPromise = {
+  const work = {
     resolve: () => {},
-    reject: () => {},
-    count: 0
+    reject: () => {}
   }
   this.initialize = () => {
     return new Promise ((resolve, reject) => {
@@ -49,19 +48,20 @@ function waveFiller(options) {
           this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
           // init workers
           this.workers = [];
-          workerPromise.resolve = resolve;
-          workerPromise.reject = reject;
+          work.resolve = resolve;
+          work.reject = reject;
+          work.count = 0;
           for (let index = 0; index < this.workerCount; index++) {
             const worker = new Worker(`${this.libraryPath}/worker.js`);
             worker.working = false;
             worker.onmessage = (message) => {
               switch (message.data.status) {
                 case 'initDone':
-                  workerPromise.count++;
-                  if (workerPromise.count == this.workerCount) {
-                    log(`web worker init done; ${workerPromise.count} web workers ready`);
-                    workerPromise.resolve(workerPromise.count);
-                    workerPromise.count = 0;
+                  work.count++;
+                  if (work.count == this.workerCount) {
+                    log(`web worker init done; ${work.count} web workers ready`);
+                    work.resolve(work.count);
+                    delete work.count;
                   }
                 break;
                 case 'done':
@@ -71,11 +71,11 @@ function waveFiller(options) {
             }
             worker.onerror = (error) => {
               log([`worker ${index} error`, error]);
-              workerPromise.reject(error);
+              work.reject(error);
             }
             worker.onmessageerror = (error) => {
               log([`worker ${index} message error`, error]);
-              workerPromise.reject(error);
+              work.reject(error);
             }
             worker.postMessage({
               type: 'init',
@@ -103,7 +103,7 @@ function waveFiller(options) {
               blank: this.blank
             });
             log(`cleaning done in ${window.performance.now() - this.cleanStart} ms`);
-            workerPromise.resolve();
+            work.resolve();
           }
           this.cleaner.onerror = (error) => {
             log([`cleaner error`, error]);
@@ -166,8 +166,9 @@ function waveFiller(options) {
   }
   this.updateWorkers = () => {
     return new Promise((resolve, reject) => {
-      workerPromise.resolve = resolve;
-      workerPromise.reject = reject;
+      work.resolve = resolve;
+      work.reject = reject;
+      work.count = 0;
       for (let i = 0; i < this.workerCount; i++) {
         this.workers[i].postMessage({
           type: 'init',
@@ -322,7 +323,7 @@ function waveFiller(options) {
       }
       else {
         this.locked = false;
-        workerPromise.resolve();
+        work.resolve();
       }
     }
     else {
@@ -350,26 +351,32 @@ function waveFiller(options) {
     }
     else {
       log(`play done in ${window.performance.now() - this.playStart} ms`);
+      work.resolve();
     }
   }
   this.play = (historyIndex) => {
-    if (!this.history[historyIndex]) {
-      log('undefined history index');
-      return;
-    }
-    this.locked = true;
-    this.frames = this.history[historyIndex].frames;
-    this.blank = this.history[historyIndex].blank;
-    this.pixel = this.history[historyIndex].pixel;
-    this.frameIndex = 0;
-    this.updateWorkers()
-      .then(() => {
-        this.playStart = window.performance.now();
-        window.requestAnimationFrame(renderFrame);
-      })
-      .catch((error) => {
-        log(['play error...', error]);
-      });
+    return new Promise((resolve, reject) => {
+      if (!this.history[historyIndex]) {
+        reject();
+        log('undefined history index');
+        return;
+      }
+      work.resolve = resolve;
+      this.locked = true;
+      this.frames = this.history[historyIndex].frames;
+      this.blank = this.history[historyIndex].blank;
+      this.pixel = this.history[historyIndex].pixel;
+      this.frameIndex = 0;
+      this.updateWorkers()
+        .then(() => {
+          this.playStart = window.performance.now();
+          window.requestAnimationFrame(renderFrame);
+        })
+        .catch((error) => {
+          reject();
+          log(['play error...', error]);
+        });
+    });
   }
   this.fill = (x, y) => {
     return new Promise ((resolve, reject) => {
@@ -378,8 +385,8 @@ function waveFiller(options) {
         resolve();
         return;
       }
-      workerPromise.resolve = resolve;
-      workerPromise.reject = reject;
+      work.resolve = resolve;
+      work.reject = reject;
       this.locked = true;
       this.frameIndex = 0;
       this.frames = [];
