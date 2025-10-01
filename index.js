@@ -12,6 +12,7 @@ function waveFiller(options) {
   this.minWorkerLoad = options.minWorkerLoad || 100; // minimum number of shore pixels, if more are available, to be assigned to a web worker
   this.maxWorkerLoad = options.maxWorkerLoad ?? 200; // maximum number of shore pixels to be assigned to a worker (set to 0 to disable)
   this.computeAhead = options.computeAhead; // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
+  this.record = options.record; // set this to true to enable undo, redo & playback functionality
   this.libraryPath = options.libraryPath || './' // path to library directory relative to current context
   this.silent = options.silent // set to true to disable console logs
   const frameTime = this.fps ? 1000 / this.fps : 0;
@@ -25,6 +26,9 @@ function waveFiller(options) {
   }
   this.initialize = () => {
     return new Promise ((resolve, reject) => {
+      this.history = [];
+      this.historyIndex = 0;
+      this.frameIndex = 0;
       this.context = this.canvas.getContext('2d');
       let width = this.dimensions.width;
       let height = this.dimensions.height;
@@ -43,12 +47,12 @@ function waveFiller(options) {
           this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
           this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+          // init workers
           this.workers = [];
           workerPromise.resolve = resolve;
           workerPromise.reject = reject;
-          const workerBlob = await (await fetch(`${this.libraryPath}worker.js`)).blob();
           for (let index = 0; index < this.workerCount; index++) {
-            const worker = new Worker(URL.createObjectURL(workerBlob));
+            const worker = new Worker(`${this.libraryPath}/worker.js`);
             worker.working = false;
             worker.onmessage = (message) => {
               switch (message.data.status) {
@@ -76,7 +80,7 @@ function waveFiller(options) {
             worker.postMessage({
               type: 'init',
               input: {
-                index,
+                workerIndex: index,
                 threshold: this.threshold,
                 blank: this.blank,
                 pixel: this.pixel,
@@ -88,6 +92,25 @@ function waveFiller(options) {
             });
             this.workers.push(worker);
           }
+          // init cleaner
+          this.cleaner = new Worker(`${this.libraryPath}/cleaner.js`);
+          this.cleaner.onmessage = (message) => {
+            this.frames = message.data.frames;
+            this.locked = false;
+            this.history.splice(this.historyIndex, Infinity, {
+              frames: this.frames,
+              pixel: this.pixel,
+              blank: this.blank
+            });
+            log(`cleaning done in ${window.performance.now() - this.cleanStart} ms`);
+            workerPromise.resolve();
+          }
+          this.cleaner.onerror = (error) => {
+            log([`cleaner error`, error]);
+          }
+          this.cleaner.onmessageerror = (error) => {
+            log([`cleaner message error`, error]);
+          }
         }
         catch (error) {
           log(['initialize error', error]);
@@ -97,6 +120,9 @@ function waveFiller(options) {
     });
   }
   this.reset = () => {
+    this.history = [];
+    this.historyIndex = 0;
+    this.frameIndex = 0;
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
     this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
@@ -165,13 +191,14 @@ function waveFiller(options) {
     this.pixels.data[start + 2] = this.pixel[2];
     this.pixels.data[start + 3] = this.pixel[3];
   }
-  const checkFrame = (frame) => {
-    if (!this.frames[frame]) {
-      this.frames[frame] = {
+  const checkFrame = (index) => {
+    if (!this.frames[index]) {
+      this.frames[index] = {
         shore: [],
         worked: 0,
         nextIdleShorePixel: 0,
-        filled: []
+        filled: [],
+        blank: this.blank
       }
     }
   }
@@ -184,12 +211,12 @@ function waveFiller(options) {
     }
     return idle;
   }
-  const getIdleFrameIndex = (frame) => {
-    while (this.frames[frame]) {
-      if (this.frames[frame].nextIdleShorePixel < this.frames[frame].shore.length) {
-        return frame;
+  const getIdleFrameIndex = (index) => {
+    while (this.frames[index]) {
+      if (this.frames[index].nextIdleShorePixel < this.frames[index].shore.length) {
+        return index;
       }
-      frame++;
+      index++;
     }
     return -1;
   }
@@ -197,7 +224,7 @@ function waveFiller(options) {
     if (assigningWork) {
       return;
     }
-    const idleFrameIndex = getIdleFrameIndex(this.frame);
+    const idleFrameIndex = getIdleFrameIndex(this.frameIndex);
     const idleWorkers = getIdleWorkers();
     if (idleFrameIndex < 0 || !idleWorkers.length) {
       return;
@@ -225,7 +252,7 @@ function waveFiller(options) {
       this.workers[workerIndex].postMessage({
         type: 'work',
         input: {
-          frame: idleFrameIndex,
+          frameIndex: idleFrameIndex,
           shore
         }
       });
@@ -235,28 +262,27 @@ function waveFiller(options) {
     assigningWork = false;
   }
   const handleWorkerDone = (output) => {
-    this.workers[output.index].working = false;
-    checkFrame(output.frame + 1);
-    const currentFrame = this.frames[this.frame];
-    const outputFrame = this.frames[output.frame];
-    const nextFrame = this.frames[output.frame + 1];
+    this.workers[output.workerIndex].working = false;
+    checkFrame(output.frameIndex + 1);
+    const currentFrame = this.frames[this.frameIndex];
+    const outputFrame = this.frames[output.frameIndex];
+    const nextFrame = this.frames[output.frameIndex + 1];
     outputFrame.worked += output.worked;
     nextFrame.shore = nextFrame.shore.concat(output.nextShore);
     outputFrame.filled = outputFrame.filled.concat(output.filled);
-    checkFrameReady();
     if (this.computeAhead) {
       assignWork();
     }
-    else if (this.maxWorkerLoad && output.frame == this.frame && currentFrame.nextIdleShorePixel < currentFrame.shore.length) {
-      assignWork(this.frame);
+    else if (this.maxWorkerLoad && output.frame == this.frameIndex && currentFrame.nextIdleShorePixel < currentFrame.shore.length) {
+      assignWork(this.frameIndex);
     }
   }
   const checkFrameReady = () => {
-    const currentFrame = this.frames[this.frame];
+    const currentFrame = this.frames[this.frameIndex];
     if (!currentFrame) {
       return;
     }
-    if (currentFrame.worked == currentFrame.shore.length && (this.frame == 0 || this.frames[this.frame - 1].computed)) { // frame done
+    if (currentFrame.worked == currentFrame.shore.length && (this.frameIndex == 0 || this.frames[this.frameIndex - 1].computed)) { // frame done
       const computeTime = window.performance.now() - frameStart;
       if (computeTime < frameTime - skipTimeDiff) {
         window.requestAnimationFrame(checkFrameReady);
@@ -270,7 +296,7 @@ function waveFiller(options) {
     }
   }
   const paintFrame = () => {
-    let currentFrame = this.frames[this.frame];
+    let currentFrame = this.frames[this.frameIndex];
     if (!currentFrame.shore.length) {
       return;
     }
@@ -279,16 +305,25 @@ function waveFiller(options) {
     }
     this.context.putImageData(this.pixels, 0, 0);
     delete currentFrame.shore;
-    delete currentFrame.filled;
+    currentFrame.filled;
     currentFrame.computed = true;
-    this.frame++;
-    currentFrame = this.frames[this.frame];
+    this.frameIndex++;
+    currentFrame = this.frames[this.frameIndex];
     if (!currentFrame?.shore.length) { // animation done
       this.end = window.performance.now();
       this.runTime = this.end - this.start;
       log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
-      this.locked = false;
-      workerPromise.resolve();
+      if (this.record) {
+        log('cleaning frames...');
+        this.cleanStart = window.performance.now();
+        this.cleaner.postMessage({
+          frames: this.frames
+        });
+      }
+      else {
+        this.locked = false;
+        workerPromise.resolve();
+      }
     }
     else {
       const computeTime = window.performance.now() - frameStart;
@@ -301,6 +336,40 @@ function waveFiller(options) {
     if (!this.computeAhead) {
       assignWork();
     }
+    window.requestAnimationFrame(checkFrameReady);
+  }
+  const renderFrame = () => {
+    const frame = this.frames[this.frameIndex];
+    for (let i = 0; i < frame.filled.length; i++) {
+      this.putPixel(frame.filled[i][0], frame.filled[i][1]);
+    }
+    this.context.putImageData(this.pixels, 0, 0);
+    if (this.frameIndex + 1 < this.frames.length) {
+      this.frameIndex++;
+      window.requestAnimationFrame(renderFrame);
+    }
+    else {
+      log(`play done in ${window.performance.now() - this.playStart} ms`);
+    }
+  }
+  this.play = (historyIndex) => {
+    if (!this.history[historyIndex]) {
+      log('undefined history index');
+      return;
+    }
+    this.locked = true;
+    this.frames = this.history[historyIndex].frames;
+    this.blank = this.history[historyIndex].blank;
+    this.pixel = this.history[historyIndex].pixel;
+    this.frameIndex = 0;
+    this.updateWorkers()
+      .then(() => {
+        this.playStart = window.performance.now();
+        window.requestAnimationFrame(renderFrame);
+      })
+      .catch((error) => {
+        log(['play error...', error]);
+      });
   }
   this.fill = (x, y) => {
     return new Promise ((resolve, reject) => {
@@ -312,11 +381,12 @@ function waveFiller(options) {
       workerPromise.resolve = resolve;
       workerPromise.reject = reject;
       this.locked = true;
-      this.frame = 0;
-      this.frames = {};
+      this.frameIndex = 0;
+      this.frames = [];
+      this.historyIndex++;
       skipTimeDiff = 0;
-      checkFrame(this.frame);
-      this.frames[this.frame].shore = [[x, y]];
+      checkFrame(this.frameIndex);
+      this.frames[this.frameIndex].shore = [[x, y]];
       this.start = window.performance.now();
       computeNextFrame();
       assignWork();

@@ -100,8 +100,8 @@ onmessage = (message) => {
       postMessage({
         status: 'done',
         output: {
-          index: context.index, // worker id
-          frame: context.frame,
+          workerIndex: context.workerIndex, // worker index
+          frameIndex: context.frameIndex,
           worked: context.shore.length,
           filled: context.filled, // pixels to be filled in main thread
           nextShore: context.edge
