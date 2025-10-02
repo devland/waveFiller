@@ -15,10 +15,13 @@ function waveFiller(options) {
   this.record = options.record; // set this to true to enable undo, redo & playback functionality
   this.libraryPath = options.libraryPath || './' // path to library directory relative to current context
   this.silent = options.silent // set to true to disable console logs
-  const frameTime = this.fps ? 1000 / this.fps : 0;
+  const idealFrameTime = this.fps ? 1000 / this.fps : 0;
   let skipTimeDiff = 0;
-  let frameStart = 0;
+  let frameStart;
+  let cleanStart;
+  let playStart;
   let assigningWork = false;
+  let reversePlay = false;
   const work = {
     resolve: () => {},
     reject: () => {}
@@ -26,7 +29,7 @@ function waveFiller(options) {
   this.initialize = () => {
     return new Promise ((resolve, reject) => {
       this.history = [];
-      this.historyIndex = 0;
+      this.historyIndex = -1;
       this.frameIndex = 0;
       this.context = this.canvas.getContext('2d');
       let width = this.dimensions.width;
@@ -102,7 +105,7 @@ function waveFiller(options) {
               pixel: this.pixel,
               blank: this.blank
             });
-            log(`cleaning done in ${window.performance.now() - this.cleanStart} ms`);
+            log(`cleaning done in ${window.performance.now() - cleanStart} ms`);
             work.resolve();
           }
           this.cleaner.onerror = (error) => {
@@ -118,15 +121,6 @@ function waveFiller(options) {
         }
       }
     });
-  }
-  this.reset = () => {
-    this.history = [];
-    this.historyIndex = 0;
-    this.frameIndex = 0;
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
-    this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-    return this.updateWorkers();
   }
   this.fit = (maxWidth, maxHeight, center) => { // compute canvas size and position to fit within given max dimensions
     let width;
@@ -284,8 +278,8 @@ function waveFiller(options) {
       return;
     }
     if (currentFrame.worked == currentFrame.shore.length && (this.frameIndex == 0 || this.frames[this.frameIndex - 1].computed)) { // frame done
-      const computeTime = window.performance.now() - frameStart;
-      if (computeTime < frameTime - skipTimeDiff) {
+      const frameTime = window.performance.now() - frameStart;
+      if (frameTime < idealFrameTime - skipTimeDiff) {
         window.requestAnimationFrame(checkFrameReady);
       }
       else {
@@ -313,10 +307,11 @@ function waveFiller(options) {
     if (!currentFrame?.shore.length) { // animation done
       this.end = window.performance.now();
       this.runTime = this.end - this.start;
+      const frameRate = ((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2);
       log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
       if (this.record) {
         log('cleaning frames...');
-        this.cleanStart = window.performance.now();
+        cleanStart = window.performance.now();
         this.cleaner.postMessage({
           frames: this.frames
         });
@@ -327,8 +322,8 @@ function waveFiller(options) {
       }
     }
     else {
-      const computeTime = window.performance.now() - frameStart;
-      skipTimeDiff = this.fps ? computeTime - frameTime + skipTimeDiff : 0;
+      const frameTime = window.performance.now() - frameStart;
+      skipTimeDiff = this.fps ? frameTime - idealFrameTime + skipTimeDiff : 0;
       computeNextFrame();
     }
   }
@@ -339,50 +334,112 @@ function waveFiller(options) {
     }
     window.requestAnimationFrame(checkFrameReady);
   }
-  const renderFrame = () => {
+  const playFrame = () => {
+    let frameTime = window.performance.now() - frameStart;
+    if (frameTime < idealFrameTime - skipTimeDiff) {
+      window.requestAnimationFrame(playFrame);
+      return;
+    }
     const frame = this.frames[this.frameIndex];
     for (let i = 0; i < frame.filled.length; i++) {
       this.putPixel(frame.filled[i][0], frame.filled[i][1]);
     }
     this.context.putImageData(this.pixels, 0, 0);
-    if (this.frameIndex + 1 < this.frames.length) {
-      this.frameIndex++;
-      window.requestAnimationFrame(renderFrame);
+    let done = false;
+    if (reversePlay) {
+      if (this.frameIndex > 0) {
+        this.frameIndex--;
+      }
+      else {
+        done = true;
+      }
     }
     else {
-      log(`play done in ${window.performance.now() - this.playStart} ms`);
+      if (this.frameIndex + 1 < this.frames.length) {
+        this.frameIndex++;
+      }
+      else {
+        done = true;
+      }
+    }
+    if (done) {
+      const playTime = window.performance.now() - playStart;
+      const frameRate = ((Object.keys(this.frames).length - 1) / playTime * 1000).toFixed(2);
+      log(`play done in ${playTime} ms @ ${frameRate} fps`);
+      this.locked = false;
+      this.blank = this.cursor.blank;
+      this.pixel = this.cursor.pixel;
+      delete this.cursor;
       work.resolve();
     }
+    else {
+      frameTime = window.performance.now() - frameStart;
+      skipTimeDiff = this.fps ? frameTime - idealFrameTime + skipTimeDiff : 0;
+      frameStart = window.performance.now();
+      window.requestAnimationFrame(playFrame);
+    }
   }
-  this.play = (historyIndex) => {
+  this.play = (historyIndex, reverse) => {
     return new Promise((resolve, reject) => {
       if (!this.history[historyIndex]) {
-        reject();
-        log('undefined history index');
+        reject('undefined history index');
         return;
       }
+      if (this.locked) {
+        reject('locked; already playing');
+        return;
+      }
+      playStart = window.performance.now();
       work.resolve = resolve;
       this.locked = true;
       this.frames = this.history[historyIndex].frames;
-      this.blank = this.history[historyIndex].blank;
-      this.pixel = this.history[historyIndex].pixel;
-      this.frameIndex = 0;
-      this.updateWorkers()
-        .then(() => {
-          this.playStart = window.performance.now();
-          window.requestAnimationFrame(renderFrame);
-        })
-        .catch((error) => {
-          reject();
-          log(['play error...', error]);
-        });
+      this.cursor = {
+        blank: this.blank,
+        pixel: this.pixel
+      }
+      if (reverse) {
+        this.blank = this.history[historyIndex].pixel;
+        this.pixel = this.history[historyIndex].blank;
+      }
+      else {
+        this.blank = this.history[historyIndex].blank;
+        this.pixel = this.history[historyIndex].pixel;
+      }
+      reversePlay = reverse;
+      if (reversePlay) {
+        this.frameIndex = this.history[historyIndex].frames.length - 1;
+      }
+      else {
+        this.frameIndex = 0;
+      }
+      this.historyIndex = reversePlay ? historyIndex -1 : historyIndex;
+      skipTimeDiff = 0;
+      frameStart = window.performance.now();
+      window.requestAnimationFrame(playFrame);
+    })
+    .then(() => {
+      return this.updateWorkers();
     });
+  }
+  this.undo = () => {
+    return this.play(this.historyIndex, true);
+  }
+  this.redo = () => {
+    return this.play(this.historyIndex + 1);
+  }
+  this.reset = () => {
+    this.history = [];
+    this.historyIndex = -1;
+    this.frameIndex = 0;
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+    this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    return this.updateWorkers();
   }
   this.fill = (x, y) => {
     return new Promise ((resolve, reject) => {
       if (this.locked) {
-        log('locked; already running');
-        resolve();
+        reject('locked; already running');
         return;
       }
       work.resolve = resolve;
