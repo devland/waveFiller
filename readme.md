@@ -77,4 +77,27 @@ const resetCanvas = async () => {
   console.log('canvas has been reset');
 }
 ```
+6. To undo the last fill action run the `undo` async method. This will run the last fill animation in reverse.
+```javascript
+const undo = async () => {
+  await bucket.undo();
+  console.log('undo done');
+}
+```
+7. To redo run the `uredo` async method.
+```javascript
+const redo = async () => {
+  await bucket.redo();
+  console.log('redo done');
+}
+```
+8. Both the undo and redo methods use the built in `play` method that allows you to play any fill action from the `history` array.  
+To play a history entry run the `play` async method with the desired historyIndex parameter.
+```javascript
+const play = async (historyIndex) => {
+  await bucket.play(historyIndex);
+  console.log('play done');
+}
+```
+The `undo`, `redo` and `play` functions only work if the `record` config value is set to `true`.
 [waveFillerDemo.webm](https://github.com/user-attachments/assets/1666c09d-dfda-4dfa-9921-8989713baf24)
