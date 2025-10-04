@@ -99,12 +99,12 @@ function waveFiller(options) {
           this.cleaner = new Worker(`${this.libraryPath}/cleaner.js`);
           this.cleaner.onmessage = (message) => {
             this.frames = message.data.frames;
-            this.locked = false;
             this.history.splice(this.historyIndex, Infinity, {
               frames: this.frames,
               pixel: this.pixel,
               blank: this.blank
             });
+            this.locked = false;
             log(`cleaning done in ${window.performance.now() - cleanStart} ms`);
             work.resolve();
           }
@@ -389,9 +389,9 @@ function waveFiller(options) {
         reject('locked; already playing');
         return;
       }
+      this.locked = true;
       playStart = window.performance.now();
       work.resolve = resolve;
-      this.locked = true;
       this.frames = this.history[historyIndex].frames;
       this.cursor = {
         blank: this.blank,
@@ -442,9 +442,9 @@ function waveFiller(options) {
         reject('locked; already running');
         return;
       }
+      this.locked = true;
       work.resolve = resolve;
       work.reject = reject;
-      this.locked = true;
       this.frameIndex = 0;
       this.frames = [];
       this.historyIndex++;
