@@ -27,30 +27,30 @@
           silent: false // set to true to disable console logs
         });
         bucket.initialize()
-          .then((result) => {
-            // init done; set click event listener
-            console.log(`yep, ${result} workers are ready :)`);
-            bucket.canvas.onclick = (event) => {
-              bucket.click(event.clientX, event.clientY)
-                .then(() => {
-                  console.log('yep; click fill is done');
-                })
-                .catch((error) => {
-                  console.log('fill error');
-                  console.log(error);
-                });
-            }
-            // resize and center
-            document.body.style.backgroundImage = 'url("yo.jpg")';
+        .then((result) => {
+          // init done; set click event listener
+          console.log(`yep, ${result} workers are ready :)`);
+          bucket.canvas.onclick = (event) => {
+            bucket.click(event.clientX, event.clientY)
+              .then(() => {
+                console.log('yep; click fill is done');
+              })
+              .catch((error) => {
+                console.log('fill error');
+                console.log(error);
+              });
+          }
+          // resize and center
+          document.body.style.backgroundImage = 'url("yo.jpg")';
+          bucket.resize(window.innerWidth, window.innerHeight, true);
+          window.addEventListener("resize", () => {
             bucket.resize(window.innerWidth, window.innerHeight, true);
-            window.addEventListener("resize", () => {
-              bucket.resize(window.innerWidth, window.innerHeight, true);
-            });
-          })
-          .catch((error) => {
-            console.log('oops; initialize error...');
-            console.log(error);
           });
+        })
+        .catch((error) => {
+          console.log('oops; initialize error...');
+          console.log(error);
+        });
       });
     </script>
   </head>
