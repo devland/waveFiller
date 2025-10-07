@@ -84,7 +84,7 @@ const undo = async () => {
   console.log('undo done');
 }
 ```
-7. To redo run the `uredo` async method.
+7. To redo run the `redo` async method.
 ```javascript
 const redo = async () => {
   await bucket.redo();
