@@ -1,6 +1,7 @@
 onmessage = (message) => {
   const done = {};
   const frames = message.data.frames;
+  let totalFilled = 0;
   const output = [];
   for (let i = 0; i < frames.length; i++) {
     const filled = [];
@@ -8,6 +9,7 @@ onmessage = (message) => {
       if (!done[pixel]) {
         filled.push(pixel);
         done[pixel] = true;
+        totalFilled++;
       }
     }
     if (filled.length) {
@@ -15,5 +17,8 @@ onmessage = (message) => {
       output.push(frames[i]);
     }
   }
-  postMessage({ frames: output });
+  postMessage({
+    frames: output,
+    totalFilled
+  });
 }

@@ -99,9 +99,11 @@ function waveFiller(options) {
           this.cleaner = new Worker(`${this.libraryPath}/cleaner.js`);
           this.cleaner.onmessage = (message) => {
             this.frames = message.data.frames;
+            this.totalFilled = message.data.totalFilled;
             if (this.frames.length) {
               this.history.splice(this.historyIndex, Infinity, {
                 frames: this.frames,
+                totalFilled: message.data.totalFilled,
                 pixel: this.pixel,
                 blank: this.blank
               });
@@ -111,6 +113,7 @@ function waveFiller(options) {
             }
             this.locked = false;
             log(`cleaning done in ${window.performance.now() - cleanStart} ms`);
+            log(`${this.totalFilled} pixels filled`);
             work.resolve();
           }
           this.cleaner.onerror = (error) => {
