@@ -19,9 +19,7 @@ function waveFiller(options) {
   let skipTimeDiff = 0;
   let frameStart;
   let cleanStart;
-  let playStart;
   let assigningWork = false;
-  let reversePlay = false;
   const work = {
     resolve: () => {},
     reject: () => {}
@@ -31,6 +29,7 @@ function waveFiller(options) {
       this.history = [];
       this.historyIndex = -1;
       this.frameIndex = 0;
+      this.player = {};
       this.context = this.canvas.getContext('2d');
       let width = this.dimensions.width;
       let height = this.dimensions.height;
@@ -187,12 +186,12 @@ function waveFiller(options) {
       }
     });
   }
-  this.putPixel = (x, y) => {
+  this.putPixel = (x, y, pixel) => {
     const start = (y * this.canvas.width + x) * 4;
-    this.pixels.data[start] = this.pixel[0];
-    this.pixels.data[start + 1] = this.pixel[1];
-    this.pixels.data[start + 2] = this.pixel[2];
-    this.pixels.data[start + 3] = this.pixel[3];
+    this.pixels.data[start] = pixel[0];
+    this.pixels.data[start + 1] = pixel[1];
+    this.pixels.data[start + 2] = pixel[2];
+    this.pixels.data[start + 3] = pixel[3];
   }
   const checkFrame = (index) => {
     if (!this.frames[index]) {
@@ -304,7 +303,7 @@ function waveFiller(options) {
       return;
     }
     for (let i = 0; i < currentFrame.filled.length; i++) {
-      this.putPixel(currentFrame.filled[i][0], currentFrame.filled[i][1]);
+      this.putPixel(currentFrame.filled[i][0], currentFrame.filled[i][1], this.pixel);
     }
     this.context.putImageData(this.pixels, 0, 0);
     delete currentFrame.shore;
@@ -342,87 +341,66 @@ function waveFiller(options) {
     }
     window.requestAnimationFrame(checkFrameReady);
   }
-  const playFrame = () => {
-    let frameTime = window.performance.now() - frameStart;
-    if (frameTime < idealFrameTime - skipTimeDiff) {
-      window.requestAnimationFrame(playFrame);
-      return;
-    }
-    const frame = this.frames[this.frameIndex];
-    for (let i = 0; i < frame.filled.length; i++) {
-      this.putPixel(frame.filled[i][0], frame.filled[i][1]);
-    }
-    this.context.putImageData(this.pixels, 0, 0);
-    let done = false;
-    if (reversePlay) {
-      if (this.frameIndex > 0) {
-        this.frameIndex--;
-      }
-      else {
-        done = true;
-      }
-    }
-    else {
-      if (this.frameIndex + 1 < this.frames.length) {
-        this.frameIndex++;
-      }
-      else {
-        done = true;
-      }
-    }
-    if (done) {
-      const playTime = window.performance.now() - playStart;
-      const frameRate = ((Object.keys(this.frames).length - 1) / playTime * 1000).toFixed(2);
-      log(`play done in ${playTime} ms @ ${frameRate} fps`);
-      this.locked = false;
-      this.blank = this.cursor.blank;
-      this.pixel = this.cursor.pixel;
-      delete this.cursor;
-      work.resolve();
-    }
-    else {
-      frameTime = window.performance.now() - frameStart;
-      skipTimeDiff = this.fps ? frameTime - idealFrameTime + skipTimeDiff : 0;
-      frameStart = window.performance.now();
-      window.requestAnimationFrame(playFrame);
-    }
-  }
   this.play = (historyIndex, reverse) => {
+    const playFrame = () => {
+      let frameTime = window.performance.now() - this.player[historyIndex].frameStart;
+      if (frameTime < idealFrameTime - this.player[historyIndex].skipTimeDiff) {
+        window.requestAnimationFrame(playFrame);
+        return;
+      }
+      const frame = this.history[historyIndex].frames[this.player[historyIndex].frameIndex];
+      for (let i = 0; i < frame.filled.length; i++) {
+        this.putPixel(frame.filled[i][0], frame.filled[i][1], this.player[historyIndex].pixel);
+      }
+      this.context.putImageData(this.pixels, 0, 0);
+      let done = false;
+      if (reverse) {
+        if (this.player[historyIndex].frameIndex > 0) {
+          this.player[historyIndex].frameIndex--;
+        }
+        else {
+          done = true;
+        }
+      }
+      else {
+        if (this.player[historyIndex].frameIndex + 1 < this.history[historyIndex].frames.length) {
+          this.player[historyIndex].frameIndex++;
+        }
+        else {
+          done = true;
+        }
+      }
+      if (done) {
+        const playTime = window.performance.now() - this.player[historyIndex].playStart;
+        const frameRate = ((Object.keys(this.history[historyIndex].frames).length - 1) / playTime * 1000).toFixed(2);
+        log(`play done in ${playTime} ms @ ${frameRate} fps`);
+        this.player[historyIndex].resolve();
+      }
+      else {
+        frameTime = window.performance.now() - this.player[historyIndex].frameStart;
+        this.player[historyIndex].skipTimeDiff = this.fps ? frameTime - idealFrameTime + this.player[historyIndex].skipTimeDiff : 0;
+        this.player[historyIndex].frameStart = window.performance.now();
+        window.requestAnimationFrame(playFrame);
+      }
+    }
     return new Promise((resolve, reject) => {
       if (!this.history[historyIndex]) {
         reject('undefined history index');
         return;
       }
-      if (this.locked) {
-        reject('locked; already playing');
-        return;
-      }
-      this.locked = true;
-      playStart = window.performance.now();
-      work.resolve = resolve;
-      this.frames = this.history[historyIndex].frames;
-      this.cursor = {
-        blank: this.blank,
-        pixel: this.pixel
-      }
+      this.player[historyIndex] = {};
+      this.player[historyIndex].playStart = window.performance.now();
+      this.player[historyIndex].resolve = resolve;
       if (reverse) {
-        this.blank = this.history[historyIndex].pixel;
-        this.pixel = this.history[historyIndex].blank;
+        this.player[historyIndex].pixel = this.history[historyIndex].blank;
+        this.player[historyIndex].frameIndex = this.history[historyIndex].frames.length - 1;
       }
       else {
-        this.blank = this.history[historyIndex].blank;
-        this.pixel = this.history[historyIndex].pixel;
+        this.player[historyIndex].pixel = this.history[historyIndex].pixel;
+        this.player[historyIndex].frameIndex = 0;
       }
-      reversePlay = reverse;
-      if (reversePlay) {
-        this.frameIndex = this.history[historyIndex].frames.length - 1;
-      }
-      else {
-        this.frameIndex = 0;
-      }
-      this.historyIndex = reversePlay ? historyIndex -1 : historyIndex;
-      skipTimeDiff = 0;
-      frameStart = window.performance.now();
+      this.player[historyIndex].skipTimeDiff = 0;
+      this.player[historyIndex].frameStart = window.performance.now();
       window.requestAnimationFrame(playFrame);
     })
     .then(() => {
@@ -430,10 +408,16 @@ function waveFiller(options) {
     });
   }
   this.undo = () => {
-    return this.play(this.historyIndex, true);
+    return this.play(this.historyIndex, true)
+    .then(() => {
+      this.historyIndex--;
+    });
   }
   this.redo = () => {
-    return this.play(this.historyIndex + 1);
+    return this.play(this.historyIndex + 1)
+    .then(() => {
+      this.historyIndex++;
+    });
   }
   this.reset = () => {
     this.history = [];
