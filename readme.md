@@ -60,7 +60,7 @@ await bucket.fill(50, 50);
 console.log('yep; fill is done');
 ```
 # USAGE
-4. Remember to run the `updateWorkers` function if you change the instance settings so that the workers will run with them.  
+4. Remember to run the `updateWorkers` function if you change the instance settings or if any other paint actions occur on the canvas outside of the `fill` or `click` methods.  
 For example, to change the `blank` and `pixel` values run the function below.  
 ```javascript
 const changeColors = async () => {
@@ -92,10 +92,14 @@ const redo = async () => {
 }
 ```
 8. Both the undo and redo methods use the built in `play` method that allows you to play any fill action from the `history` array.  
-To play a history entry run the `play` async method with the desired historyIndex parameter.
+To play a history entry run the `play` async method with the desired historyIndex parameter.  
+Remember to run `updateWorkers` after calling `play` so that the active workers receive the newly painted canvas.
 ```javascript
-const play = async (historyIndex) => {
-  await bucket.play(historyIndex);
+const play = async (historyIndex, reversed) => {
+  // historyIndex: fill action index from the history array that will be played
+  // reversed: set to true if you want to run the animation in reverse
+  await bucket.play(historyIndex, reversed);
+  await bucket.updateWorkers();
   console.log('play done');
 }
 ```

@@ -402,21 +402,20 @@ function waveFiller(options) {
       this.player[historyIndex].skipTimeDiff = 0;
       this.player[historyIndex].frameStart = window.performance.now();
       window.requestAnimationFrame(playFrame);
-    })
-    .then(() => {
-      return this.updateWorkers();
     });
   }
   this.undo = () => {
     return this.play(this.historyIndex, true)
     .then(() => {
       this.historyIndex--;
+      return this.updateWorkers();
     });
   }
   this.redo = () => {
     return this.play(this.historyIndex + 1)
     .then(() => {
       this.historyIndex++;
+      return this.updateWorkers();
     });
   }
   this.reset = () => {
