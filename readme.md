@@ -91,13 +91,16 @@ const redo = async () => {
   console.log('redo done');
 }
 ```
-8. Both the undo and redo methods use the built in `play` method that allows you to play any fill action from the `history` array.  
-To play a history entry run the `play` async method with the desired historyIndex parameter.  
+8. Both the undo and redo methods use the built in `play` method that allows you to play any fill action interval from the `history` array.  
+To play history entries run the `play` async method with the desired start & end parameters.  
 Remember to run `updateWorkers` after calling `play` so that the active workers receive the newly painted canvas.
 ```javascript
-const play = async (historyIndex, reversed) => {
-  // historyIndex: fill action index from the history array that will be played
-  // reversed: set to true if you want to run the animation in reverse
+const play = async (start, end, simultaneous, reverse) => {
+  /* 
+   * start, end: interval of fill animation entries that will be played back;
+   * simultaneous: if set to true will simultaneously play back history entries;
+   * reverse: if set to true will play back animation(s) in reverse frame order;
+   * */
   await bucket.play(historyIndex, reversed);
   await bucket.updateWorkers();
   console.log('play done');
