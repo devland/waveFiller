@@ -25,7 +25,8 @@ const bucket = new waveFiller({
   canvas: document.getElementById('canvas'), // canvas DOM element
   imageSrc: 'maze.png', // image to render in the canvas
   threshold: 60, // maximum deviance in color channel value allowed for a pixel to be considered blank
-  blank: [255, 255, 255, 255], // white - set it to whatever color is considered blank in the image
+  solid: [0, 0, 0, 255], // black - set it to whatever color can never be filled in the image
+  blank: [255, 255, 255, 255], // white - set it to whatever color can be filled in the image
   pixel: [255, 0, 0, 50], // red - set it to whatever fill color you want as RGBA
   radius: 20, // wave size in pixels rendered per frame
   fps: 60, // frame limiter (set to 0 to disable); actual fps can be lower depending on your CPU
@@ -47,11 +48,13 @@ const bucket = new waveFiller({
 const workerCount = await bucket.initialize();
 console.log(`yep, ${workerCount} workers are ready :)`);
 bucket.canvas.onclick = async (event) => {
-  await bucket.click(event.clientX, event.clientY);
+  const setBlank = false; // set this to false if you don't want to overwrite the current blanl color with the one that was clicked within the canvas
+  await bucket.click(event.clientX, event.clientY, setBlank);
   console.log('yep; click fill is done');
 }
 ```
 Now you can click within the canvas to trigger the animated bucket fill effect.  
+The optional `setBlank` parameter set to `true` automatically overwrites the fill `pixel` value with the color that was clicked in the canvas.  
 3. Optionally, you can trigger the effect programatically by using the `fill` method like below.  
 ```javascript
 const workerCount = await bucket.initialize();

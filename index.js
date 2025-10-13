@@ -3,7 +3,8 @@ function waveFiller(options) {
   this.canvas = options.canvas; // canvas DOM element
   this.imageSrc = options.imageSrc; // image to render in the canvas
   this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank
-  this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color is considered blank in the image
+  this.solid = options.solid || [0, 0, 0, 255]; // black - set it to whatever color can never be filled in the image
+  this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color can be filled in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
   this.radius = options.radius || 20; // wave size in pixels rendered per frame
   this.fps = options.fps ?? 60; // frame limiter (set to 0 to disable); actual fps can be lower depending on your CPU
@@ -99,17 +100,8 @@ function waveFiller(options) {
           this.cleaner.onmessage = (message) => {
             this.frames = message.data.frames;
             this.totalFilled = message.data.totalFilled;
-            if (this.frames.length) {
-              this.history.splice(this.historyIndex, Infinity, {
-                frames: this.frames,
-                totalFilled: message.data.totalFilled,
-                pixel: this.pixel,
-                blank: this.blank
-              });
-            }
-            else {
-              this.historyIndex--;
-            }
+            this.history = message.data.history;
+            this.historyIndex = message.data.historyIndex;
             this.locked = false;
             log(`cleaning done in ${window.performance.now() - cleanStart} ms`);
             log(`${this.totalFilled} pixels filled`);
@@ -165,26 +157,33 @@ function waveFiller(options) {
       this.canvas.style.top = resized.top + 'px';
     }
   }
-  this.updateWorkers = () => {
+  this.updateWorkers = (input) => {
     return new Promise((resolve, reject) => {
       work.resolve = resolve;
       work.reject = reject;
       work.count = 0;
+      if (!input) {
+        input = {
+          threshold: this.threshold,
+          blank: this.blank,
+          pixel: this.pixel,
+          radius: this.radius,
+          width: this.canvas.width,
+          height: this.canvas.height,
+          pixels: this.pixels.data
+        }
+      }
       for (let i = 0; i < this.workerCount; i++) {
         this.workers[i].postMessage({
           type: 'init',
-          input: {
-            threshold: this.threshold,
-            blank: this.blank,
-            pixel: this.pixel,
-            radius: this.radius,
-            width: this.canvas.width,
-            height: this.canvas.height,
-            pixels: this.pixels.data
-          }
+          input
         });
       }
     });
+  }
+  this.getPixel = (x, y) => {
+    const start = (y * this.canvas.width + x) * 4;
+    return this.pixels.data.slice(start, start + 4);
   }
   this.putPixel = (x, y, pixel) => {
     const start = (y * this.canvas.width + x) * 4;
@@ -192,6 +191,15 @@ function waveFiller(options) {
     this.pixels.data[start + 1] = pixel[1];
     this.pixels.data[start + 2] = pixel[2];
     this.pixels.data[start + 3] = pixel[3];
+  }
+  this.equalColors = (first, second) => {
+    if (Math.abs(first[0] - second[0]) <= this.threshold &&
+        Math.abs(first[1] - second[1]) <= this.threshold &&
+        Math.abs(first[2] - second[2]) <= this.threshold &&
+        Math.abs(first[3] - second[3]) <= this.threshold) {
+      return true;
+    }
+    return false;
   }
   const checkFrame = (index) => {
     if (!this.frames[index]) {
@@ -320,7 +328,11 @@ function waveFiller(options) {
         log('cleaning frames...');
         cleanStart = window.performance.now();
         this.cleaner.postMessage({
-          frames: this.frames
+          pixel: this.pixel,
+          blank: this.blank,
+          frames: this.frames,
+          history: this.history,
+          historyIndex: this.historyIndex
         });
       }
       else {
@@ -400,7 +412,7 @@ function waveFiller(options) {
     }
     return new Promise((resolve, reject) => {
       if (this.locked) {
-        reject('locked; already playing');
+        reject('locked; already running');
         return;
       }
       if (!this.history[start] || (end > -1 && !this.history[end])) {
@@ -408,7 +420,7 @@ function waveFiller(options) {
         return;
       }
       if (end < start) {
-        reject('end < start');
+        reject('forbidden: end < start');
         return;
       }
       this.locked = true;
@@ -465,6 +477,10 @@ function waveFiller(options) {
         reject('locked; already running');
         return;
       }
+      if (this.equalColors(this.pixel, this.solid)) {
+        reject('forbidden: fill color = solid color');
+        return;
+      }
       idealFrameTime = this.fps ? 1000 / this.fps : 0;
       this.locked = true;
       work.resolve = resolve;
@@ -480,11 +496,21 @@ function waveFiller(options) {
       assignWork();
     });
   }
-  this.click = (x, y) => { // computes x, y click event coordinates relative to canvas pixels
+  // computes x, y click event coordinates & optional blank color relative to canvas pixels and runs fill function
+  this.click = async (x, y, setBlank) => {
     const canvasScale = this.canvas.width / this.canvas.offsetWidth;
     const canvasBR = this.canvas.getBoundingClientRect();
     x = Math.floor((x - canvasBR.left) * canvasScale);
     y = Math.floor((y - canvasBR.top) * canvasScale);
+    if (setBlank) {
+      const blank = this.getPixel(x, y);
+      if (this.equalColors(this.pixel, blank)) {
+        throw 'forbidden: fill color = blank color';
+        return;
+      }
+      this.blank = blank;
+      await this.updateWorkers({ blank: this.blank });
+    }
     return this.fill(x, y);
   }
   const log = (input) => {
