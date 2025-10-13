@@ -193,12 +193,12 @@ function waveFiller(options) {
     else {
       this.historyIndex--;
     }
-    this.locked = false;
-    log(`cleaning done in ${window.performance.now() - cleanStart} ms`);
+    log(`cleaning frames done in ${window.performance.now() - cleanStart} ms`);
     log(`${this.totalFilled} pixels filled`);
-    work.resolve();
   }
   this.cleanHistory = () => { // remove overwritten fill actions from history
+    log('cleaning history...');
+    const cleanStart = window.performance.now();
     const sample = this.frames[0].filled[0];
     const toRemove = [];
     for (let i = 0; i < this.history.length - 1; i++) {
@@ -225,6 +225,7 @@ function waveFiller(options) {
         this.historyIndex--;
       }
     }
+    log(`cleaning history done in ${window.performance.now() - cleanStart} ms`);
   }
   this.getPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;
@@ -372,10 +373,8 @@ function waveFiller(options) {
       if (this.record) {
         this.cleanFrames();
       }
-      else {
-        this.locked = false;
-        work.resolve();
-      }
+      this.locked = false;
+      work.resolve();
     }
     else {
       const frameTime = window.performance.now() - frameStart;

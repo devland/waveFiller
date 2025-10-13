@@ -112,4 +112,12 @@ const play = async (start, end, simultaneous, reverse) => {
 ```
 The `undo`, `redo` and `play` functions only work if the `record` config value is set to `true`.  
 If you intend to use the `simultaneous` option make sure to run the `cleanHistory` function before `play` in order to remove overwritten fill entries from the `history` array.  
+```javascript
+const simultaneousPlay = async (start, end, reverse) => {
+  bucket.cleanHistory();
+  await bucket.play(start, end, true, reverse);
+  await bucket.updateWorkers();
+  console.log('play done');
+}
+```
 [waveFillerDemo.webm](https://github.com/user-attachments/assets/1666c09d-dfda-4dfa-9921-8989713baf24)
