@@ -196,36 +196,43 @@ function waveFiller(options) {
     log(`cleaning frames done in ${window.performance.now() - cleanStart} ms`);
     log(`${this.totalFilled} pixels filled`);
   }
-  this.cleanHistory = () => { // remove overwritten fill actions from history
-    log('cleaning history...');
-    const cleanStart = window.performance.now();
-    const sample = this.frames[0].filled[0];
-    const toRemove = [];
-    for (let i = 0; i < this.history.length - 1; i++) {
-      let overwritten = false;
-      for (let j = 0; j < this.history[i].frames.length; j++) {
-        for (let k = 0; k < this.history[i].frames[j].filled.length; k++) {
-          if (sample[0] == this.history[i].frames[j].filled[k][0] && sample[1] == this.history[i].frames[j].filled[k][1]) {
-            overwritten = true;
+  this.findOverwrittenHistory = () => { // remove overwritten fill actions from history
+    if (!this.history.length) {
+      log('parsing history... nothing to clean');
+      return;
+    }
+    log('parsing history...');
+    const parseStart = window.performance.now();
+    const output = {};
+    for (let h = this.history.length - 1; h >= 0 ; h--) {
+      if (output[h]) {
+        continue;
+      }
+      const sample = this.history[h].frames[0].filled[0];
+      for (let i = 0; i < this.history.length - 1; i++) {
+        if (i == h || output[i]) {
+          continue;
+        }
+        let overwritten = false;
+        for (let j = 0; j < this.history[i].frames.length; j++) {
+          for (let k = 0; k < this.history[i].frames[j].filled.length; k++) {
+            if (sample[0] == this.history[i].frames[j].filled[k][0] && sample[1] == this.history[i].frames[j].filled[k][1]) {
+              overwritten = true;
+              break;
+            }
+          }
+          if (overwritten) {
             break;
           }
         }
         if (overwritten) {
-          break;
+          output[i] = true;
+          continue;
         }
       }
-      if (overwritten) {
-        toRemove.push(i);
-        continue;
-      }
     }
-    for (let index of toRemove) {
-      this.history.splice(index, 1);
-      if (index <= this.historyIndex) {
-        this.historyIndex--;
-      }
-    }
-    log(`cleaning history done in ${window.performance.now() - cleanStart} ms`);
+    log(`parsing history done in ${window.performance.now() - parseStart} ms`);
+    return output;
   }
   this.getPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;
@@ -369,7 +376,7 @@ function waveFiller(options) {
       this.end = window.performance.now();
       this.runTime = this.end - this.start;
       const frameRate = ((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2);
-      log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
+      log(`fill done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
       if (this.record) {
         this.cleanFrames();
       }
@@ -404,6 +411,9 @@ function waveFiller(options) {
         return;
       }
       for (let i = start; i <= end; i++) {
+        if (simultaneous && this.player[key].overwritten[i]) {
+          continue;
+        }
         const frame = this.history[i].frames[this.player[key].frameIndex];
         if (!frame) {
           continue;
@@ -459,12 +469,12 @@ function waveFiller(options) {
         reject('forbidden: end < start');
         return;
       }
-      this.locked = true;
-      idealFrameTime = this.fps ? 1000 / this.fps : 0;
+      this.locked = true;idealFrameTime = this.fps ? 1000 / this.fps : 0;
       end = !this.history[end] ? start : end;
       key = simultaneous ? 'all' : `${start}, ${end}`;
       this.player[key] = {};
       this.player[key].playStart = window.performance.now();
+      idealFrameTime = this.fps ? 1000 / this.fps : 0;
       this.player[key].resolve = resolve;
       let lastIndex = 0;
       for (let i = start; i <= end; i++) {
@@ -480,6 +490,7 @@ function waveFiller(options) {
         this.player[key].frameIndex = 0;
       }
       this.player[key].skipTimeDiff = 0;
+      this.player[key].overwritten = this.findOverwrittenHistory();
       this.player[key].frameStart = window.performance.now();
       window.requestAnimationFrame(playFrame);
     });
@@ -530,6 +541,9 @@ function waveFiller(options) {
   }
   // computes x, y click event coordinates & optional blank color relative to canvas pixels and runs fill function
   this.click = async (x, y, setBlank) => {
+    if (this.locked) {
+      return Promise.reject('locked; already running');
+    }
     const canvasScale = this.canvas.width / this.canvas.offsetWidth;
     const canvasBR = this.canvas.getBoundingClientRect();
     x = Math.floor((x - canvasBR.left) * canvasScale);
@@ -543,7 +557,7 @@ function waveFiller(options) {
         throw 'forbidden: blank color ~ margin color';
       }
       this.blank = blank;
-      await this.updateWorkers({ blank: this.blank });
+      await this.updateWorkers();
     }
     return this.fill(x, y);
   }
