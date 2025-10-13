@@ -38,7 +38,7 @@ const bucket = new waveFiller({
   minWorkerLoad: 100, // minimum number of shore pixels, if more are available, to be assigned to a web worker
   maxWorkerLoad: 200, // maximum number of shore pixels to be assigned to a worker (set to 0 to disable)
   computeAhead: true, // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
-  record: false, // set this to true to enable undo, redo & playback functionality
+  record: false, // set this to true to enable undo, redo & play functionality
   libraryPath: '../', // path to library directory relative to current context
   silent: false // set to true to disable console logs
 });
@@ -48,13 +48,13 @@ const bucket = new waveFiller({
 const workerCount = await bucket.initialize();
 console.log(`yep, ${workerCount} workers are ready :)`);
 bucket.canvas.onclick = async (event) => {
-  const setBlank = false; // set this to false if you don't want to overwrite the current blanl color with the one that was clicked within the canvas
+  const setBlank = false; // set this to false if you don't want to overwrite the current blank color with the one that was clicked within the canvas
   await bucket.click(event.clientX, event.clientY, setBlank);
   console.log('yep; click fill is done');
 }
 ```
 Now you can click within the canvas to trigger the animated bucket fill effect.  
-The optional `setBlank` parameter set to `true` automatically overwrites the fill `pixel` value with the color that was clicked in the canvas.  
+The optional `setBlank` parameter set to `true` automatically overwrites the `blank` value with the color that was clicked in the canvas.  
 3. Optionally, you can trigger the effect programatically by using the `fill` method like below.  
 ```javascript
 const workerCount = await bucket.initialize();
@@ -105,7 +105,7 @@ const play = async (start, end, simultaneous, reverse) => {
    * simultaneous: if set to true will simultaneously play back history entries;
    * reverse: if set to true will play back animation(s) in reverse frame order;
    * */
-  await bucket.play(historyIndex, reversed);
+  await bucket.play(start, end, simultaneous, reverse);
   await bucket.updateWorkers();
   console.log('play done');
 }

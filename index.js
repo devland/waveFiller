@@ -13,7 +13,7 @@ function waveFiller(options) {
   this.minWorkerLoad = options.minWorkerLoad || 100; // minimum number of shore pixels, if more are available, to be assigned to a web worker
   this.maxWorkerLoad = options.maxWorkerLoad ?? 200; // maximum number of shore pixels to be assigned to a worker (set to 0 to disable)
   this.computeAhead = options.computeAhead; // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
-  this.record = options.record; // set this to true to enable undo, redo & playback functionality
+  this.record = options.record; // set this to true to enable undo, redo & play functionality
   this.libraryPath = options.libraryPath || './' // path to library directory relative to current context
   this.silent = options.silent // set to true to disable console logs
   let idealFrameTime;
