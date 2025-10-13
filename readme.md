@@ -25,7 +25,7 @@ const bucket = new waveFiller({
   canvas: document.getElementById('canvas'), // canvas DOM element
   imageSrc: 'maze.png', // image to render in the canvas
   threshold: 60, // maximum deviance in color channel value allowed for a pixel to be considered blank
-  solid: [0, 0, 0, 255], // black - set it to whatever color can never be filled in the image
+  margin: [0, 0, 0, 255], // black - set it to whatever color can never be filled in the image
   blank: [255, 255, 255, 255], // white - set it to whatever color can be filled in the image
   pixel: [255, 0, 0, 50], // red - set it to whatever fill color you want as RGBA
   radius: 20, // wave size in pixels rendered per frame
@@ -62,6 +62,7 @@ console.log(`yep, ${workerCount} workers are ready :)`);
 await bucket.fill(50, 50);
 console.log('yep; fill is done');
 ```
+If you get the `forbidden: fill color ~ blank color` error this means that the `threshold` value you are using considers the fill and blank colors to be approximately equal and that is not allowed because, otherwise, the fill method will enter an infinite loop.  
 # USAGE
 4. Remember to run the `updateWorkers` function if you change the instance settings or if any other paint actions occur on the canvas outside of the `fill` or `click` methods.  
 For example, to change the `blank` and `pixel` values run the function below.  

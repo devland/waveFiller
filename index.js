@@ -3,7 +3,7 @@ function waveFiller(options) {
   this.canvas = options.canvas; // canvas DOM element
   this.imageSrc = options.imageSrc; // image to render in the canvas
   this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank
-  this.solid = options.solid || [0, 0, 0, 255]; // black - set it to whatever color can never be filled in the image
+  this.margin = options.margin || [0, 0, 0, 255]; // black - set it to whatever color can never be filled in the image
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color can be filled in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
   this.radius = options.radius || 20; // wave size in pixels rendered per frame
@@ -477,10 +477,6 @@ function waveFiller(options) {
         reject('locked; already running');
         return;
       }
-      if (this.equalColors(this.pixel, this.solid)) {
-        reject('forbidden: fill color = solid color');
-        return;
-      }
       idealFrameTime = this.fps ? 1000 / this.fps : 0;
       this.locked = true;
       work.resolve = resolve;
@@ -505,8 +501,10 @@ function waveFiller(options) {
     if (setBlank) {
       const blank = this.getPixel(x, y);
       if (this.equalColors(this.pixel, blank)) {
-        throw 'forbidden: fill color = blank color';
-        return;
+        throw 'forbidden: fill color ~ blank color';
+      }
+      if (this.equalColors(this.margin, blank)) {
+        throw 'forbidden: blank color ~ margin color';
       }
       this.blank = blank;
       await this.updateWorkers({ blank: this.blank });
