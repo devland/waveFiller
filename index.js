@@ -19,7 +19,6 @@ function waveFiller(options) {
   let idealFrameTime;
   let skipTimeDiff = 0;
   let frameStart;
-  let cleanStart;
   let assigningWork = false;
   const work = {
     resolve: () => {},
@@ -95,24 +94,6 @@ function waveFiller(options) {
             });
             this.workers.push(worker);
           }
-          // init cleaner
-          this.cleaner = new Worker(`${this.libraryPath}/cleaner.js`);
-          this.cleaner.onmessage = (message) => {
-            this.frames = message.data.frames;
-            this.totalFilled = message.data.totalFilled;
-            this.history = message.data.history;
-            this.historyIndex = message.data.historyIndex;
-            this.locked = false;
-            log(`cleaning done in ${window.performance.now() - cleanStart} ms`);
-            log(`${this.totalFilled} pixels filled`);
-            work.resolve();
-          }
-          this.cleaner.onerror = (error) => {
-            log([`cleaner error`, error]);
-          }
-          this.cleaner.onmessageerror = (error) => {
-            log([`cleaner message error`, error]);
-          }
         }
         catch (error) {
           log(['initialize error', error]);
@@ -180,6 +161,70 @@ function waveFiller(options) {
         });
       }
     });
+  }
+  this.cleanFrames = () => { // remove pixel painting redundancy
+    log('cleaning frames...');
+    const cleanStart = window.performance.now();
+    const done = {};
+    let totalFilled = 0;
+    const output = [];
+    for (let i = 0; i < this.frames.length; i++) {
+      const filled = [];
+      for (let pixel of this.frames[i].filled) {
+        if (!done[pixel]) {
+          filled.push(pixel);
+          done[pixel] = true;
+          totalFilled++;
+        }
+      }
+      if (filled.length) {
+        this.frames[i].filled = filled;
+      }
+    }
+    this.totalFilled = totalFilled;
+    if (this.frames.length) {
+      this.history.splice(this.historyIndex, Infinity, {
+        frames: this.frames,
+        totalFilled: this.totalFilled,
+        pixel: this.pixel,
+        blank: this.blank
+      });
+    }
+    else {
+      this.historyIndex--;
+    }
+    this.locked = false;
+    log(`cleaning done in ${window.performance.now() - cleanStart} ms`);
+    log(`${this.totalFilled} pixels filled`);
+    work.resolve();
+  }
+  this.cleanHistory = () => { // remove overwritten fill actions from history
+    const sample = this.frames[0].filled[0];
+    const toRemove = [];
+    for (let i = 0; i < this.history.length - 1; i++) {
+      let overwritten = false;
+      for (let j = 0; j < this.history[i].frames.length; j++) {
+        for (let k = 0; k < this.history[i].frames[j].filled.length; k++) {
+          if (sample[0] == this.history[i].frames[j].filled[k][0] && sample[1] == this.history[i].frames[j].filled[k][1]) {
+            overwritten = true;
+            break;
+          }
+        }
+        if (overwritten) {
+          break;
+        }
+      }
+      if (overwritten) {
+        toRemove.push(i);
+        continue;
+      }
+    }
+    for (let index of toRemove) {
+      this.history.splice(index, 1);
+      if (index <= this.historyIndex) {
+        this.historyIndex--;
+      }
+    }
   }
   this.getPixel = (x, y) => {
     const start = (y * this.canvas.width + x) * 4;
@@ -325,15 +370,7 @@ function waveFiller(options) {
       const frameRate = ((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2);
       log(`done in ${this.runTime} ms @ ${((Object.keys(this.frames).length - 1) / this.runTime * 1000).toFixed(2)} fps`);
       if (this.record) {
-        log('cleaning frames...');
-        cleanStart = window.performance.now();
-        this.cleaner.postMessage({
-          pixel: this.pixel,
-          blank: this.blank,
-          frames: this.frames,
-          history: this.history,
-          historyIndex: this.historyIndex
-        });
+        this.cleanFrames();
       }
       else {
         this.locked = false;
