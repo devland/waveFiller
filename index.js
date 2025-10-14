@@ -226,7 +226,7 @@ function waveFiller(options) {
           }
         }
         if (overwritten) {
-          output[i] = true;
+          output[i] = h; // i overwritten by h
           continue;
         }
       }
@@ -411,7 +411,7 @@ function waveFiller(options) {
         return;
       }
       for (let i = start; i <= end; i++) {
-        if (simultaneous && this.player[key].overwritten[i]) {
+        if (simultaneous && this.history[this.player[key].overwritten[i]]) {
           continue;
         }
         const frame = this.history[i].frames[this.player[key].frameIndex];
