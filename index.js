@@ -196,9 +196,9 @@ function waveFiller(options) {
     log(`cleaning frames done in ${window.performance.now() - cleanStart} ms`);
     log(`${this.totalFilled} pixels filled`);
   }
-  this.findOverwrittenHistory = () => { // remove overwritten fill actions from history
+  this.findOverwrittenHistory = () => { // finds overwritten fill actions in history
     if (!this.history.length) {
-      log('parsing history... nothing to clean');
+      log('parsing history... nothing to parse');
       return;
     }
     log('parsing history...');
@@ -490,7 +490,9 @@ function waveFiller(options) {
         this.player[key].frameIndex = 0;
       }
       this.player[key].skipTimeDiff = 0;
-      this.player[key].overwritten = this.findOverwrittenHistory();
+      if (simultaneous) {
+        this.player[key].overwritten = this.findOverwrittenHistory();
+      }
       this.player[key].frameStart = window.performance.now();
       window.requestAnimationFrame(playFrame);
     });
