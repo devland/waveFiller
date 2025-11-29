@@ -559,6 +559,19 @@ function waveFiller(options) {
       return this.updateWorkers();
     });
   }
+  this.timelapse = () => { // playback history entries
+    const history = this.history;
+    const historyIndex = this.historyIndex;
+    return this.reset()
+    .then(() => {
+      this.history = history;
+      this.historyIndex = historyIndex;
+      return this.play(0, historyIndex);
+    })
+    .then(() => {
+      return this.updateWorkers();
+    });
+  }
   this.reset = () => {
     this.history = [];
     this.historyIndex = -1;
