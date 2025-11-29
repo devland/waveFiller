@@ -560,17 +560,10 @@ function waveFiller(options) {
     });
   }
   this.timelapse = () => { // playback history entries
-    const history = this.history;
-    const historyIndex = this.historyIndex;
-    return this.reset()
-    .then(() => {
-      this.history = history;
-      this.historyIndex = historyIndex;
-      return this.play(0, historyIndex);
-    })
-    .then(() => {
-      return this.updateWorkers();
-    });
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+    this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    return this.play(0, this.historyIndex);
   }
   this.reset = () => {
     this.history = [];
@@ -580,6 +573,35 @@ function waveFiller(options) {
     this.context.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
     this.pixels = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
     return this.updateWorkers();
+  }
+  /*
+   * Record canvas as video file.
+   * mimeType: video format;
+   * timeSlice: chunk duration in miliseconds;
+   * */
+  this.startRecording = (mimeType, timeSlice) => {
+    return new Promise((resolve, reject) => {
+      const stream = this.canvas.captureStream(this.fps);
+      const chunks = [];
+      this.recorder = new MediaRecorder(stream, {
+        mimeType: `${mimeType ?? 'video/webm'}`
+      });
+      this.recorder.onerror = (event) => {
+        reject(event.error);
+      }
+      this.recorder.ondataavailable = (event) => {
+        chunks.push(event.data);
+      }
+      this.recorder.onstop = (event) => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        resolve(url);
+      }
+      this.recorder.start(timeSlice ?? 5000);
+    });
+  }
+  this.stopRecording = () => {
+    this.recorder.stop();
   }
   this.fill = (x, y) => {
     return new Promise ((resolve, reject) => {
