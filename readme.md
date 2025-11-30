@@ -117,7 +117,7 @@ const timelapse = async () => {
   console.log('timelapse done');
 }
 ```
-10. You can record and download a video recording of all canvas animations by running the `startRecording` and `stopRecording` functions like below.  
+10. You can record and download a video of all canvas animations by running the `startRecording` and `stopRecording` functions like below.  
 ```javascript
 const downloadVideo = () => {
   const link = document.createElement('a');
