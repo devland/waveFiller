@@ -121,7 +121,7 @@ const timelapse = async () => {
 ```javascript
 const downloadVideo = () => {
   const link = document.createElement('a');
-  link.download = `whereColorsDreamChapter${context.chapter}.webm`;
+  link.download = `videoFileName.webm`;
   bucket.startRecording()
   .then((url) => {
     link.href = url;
