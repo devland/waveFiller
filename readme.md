@@ -110,5 +110,36 @@ const play = async (start, end, simultaneous, reverse) => {
   console.log('play done');
 }
 ```
-The `undo`, `redo` and `play` functions only work if the `record` config value is set to `true`.  
+9. You can playback all the fill actions by running the `timelapse` function like below.  
+```javascript
+const timelapse = async () => {
+  await bucket.timelapse();
+  console.log('timelapse done');
+}
+```
+10. You can record and download a video recording of all canvas animations by running the `startRecording` and `stopRecording` functions like below.  
+```javascript
+const downloadVideo = () => {
+  const link = document.createElement('a');
+  link.download = `whereColorsDreamChapter${context.chapter}.webm`;
+  bucket.startRecording()
+  .then((url) => {
+    link.href = url;
+    link.click();
+  })
+  .catch((error) => {
+    console.log('recordVideo error');
+    console.log(error);
+  });
+  bucket.timelapse()
+  .then(() => {
+    window.requestAnimationFrame(bucket.stopRecording);
+  })
+  .catch((error) => {
+    console.log('timelapse error');
+    console.log(error);
+  });
+}
+```
+The `undo`, `redo`, `play` and `timelapse` functions only work if the `record` config value is set to `true`.  
 [waveFillerDemo.webm](https://github.com/user-attachments/assets/1666c09d-dfda-4dfa-9921-8989713baf24)

@@ -581,11 +581,11 @@ function waveFiller(options) {
    * */
   this.startRecording = (mimeType, timeSlice) => {
     return new Promise((resolve, reject) => {
+      mimeType = mimeType ?? 'video/webm';
+      timeSlice = timeSlice ?? 5000;
       const stream = this.canvas.captureStream(this.fps);
       const chunks = [];
-      this.recorder = new MediaRecorder(stream, {
-        mimeType: `${mimeType ?? 'video/webm'}`
-      });
+      this.recorder = new MediaRecorder(stream, { mimeType });
       this.recorder.onerror = (event) => {
         reject(event.error);
       }
@@ -593,11 +593,11 @@ function waveFiller(options) {
         chunks.push(event.data);
       }
       this.recorder.onstop = (event) => {
-        const blob = new Blob(chunks, { type: "video/webm" });
+        const blob = new Blob(chunks, { type: mimeType });
         const url = URL.createObjectURL(blob);
         resolve(url);
       }
-      this.recorder.start(timeSlice ?? 5000);
+      this.recorder.start(timeSlice);
     });
   }
   this.stopRecording = () => {
