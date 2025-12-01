@@ -411,7 +411,6 @@ function waveFiller(options) {
    * reverse: if set to true will play back animation(s) in reverse frame order;
    * */
   this.play = (start, end, simultaneous, reverse) => {
-    let key;
     let frameCount = 0;
     let playStart;
     let lastIndex = 0;
@@ -521,7 +520,6 @@ function waveFiller(options) {
       }
       this.locked = true;idealFrameTime = this.fps ? 1000 / this.fps : 0;
       end = !this.history[end] ? start : end;
-      key = simultaneous ? 'all' : `${start}, ${end}`;
       playStart = window.performance.now();
       promiseResolve = resolve;
       idealFrameTime = this.fps ? 1000 / this.fps : 0;

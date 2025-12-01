@@ -133,7 +133,7 @@ const downloadVideo = () => {
   });
   bucket.timelapse()
   .then(() => {
-    window.requestAnimationFrame(bucket.stopRecording);
+    bucket.stopRecording();
   })
   .catch((error) => {
     console.log('timelapse error');
