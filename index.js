@@ -319,7 +319,6 @@ function waveFiller(options) {
         continue;
       }
       this.workers[workerIndex].working = true;
-      this.workers[workerIndex].frame = idleFrameIndex;
       this.workers[workerIndex].postMessage({
         type: 'work',
         input: {
@@ -344,7 +343,7 @@ function waveFiller(options) {
     if (this.computeAhead) {
       assignWork();
     }
-    else if (this.maxWorkerLoad && output.frame == this.frameIndex && currentFrame.nextIdleShorePixel < currentFrame.shore.length) {
+    else if (output.frameIndex == this.frameIndex && currentFrame.nextIdleShorePixel < currentFrame.shore.length) {
       assignWork(this.frameIndex);
     }
   }

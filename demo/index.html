@@ -19,10 +19,10 @@
             width: 900, // this will be the actual canvas width; height will be calculated relative to this width
             height: null // if set height will overwrite width as the dimension for resize reference; width will be calculated relative to this height
           },
-          workerCount: 4, // number of web workers to be used
+          workerCount: 2, // number of web workers to be used
           minWorkerLoad: 100, // minimum number of shore pixels, if more are available, to be assigned to a web worker
           maxWorkerLoad: 200, // maximum number of shore pixels to be assigned to a worker (set to 0 to disable)
-          computeAhead: true, // set to true to compute upcoming frames before current frame is done for faster overall rendering; warning: wave is no longer an advancing circle when filling large areas
+          computeAhead: true, // set to true to compute upcoming frames before current frame is done for faster overall rendering
           record: false, // set this to true to enable undo, redo & play functionality
           libraryPath: '../', // path to library directory relative to current context
           silent: false // set to true to disable console logs
