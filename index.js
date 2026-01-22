@@ -2,7 +2,7 @@
 function waveFiller(options) {
   this.canvas = options.canvas; // canvas DOM element
   this.imageSrc = options.imageSrc; // image to render in the canvas
-  this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank; can be fived value or [R,G,B,A] array
+  this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank; can be fixed value or [R,G,B,A] array
   this.margin = options.margin || [0, 0, 0, 255]; // black - set it to whatever color can never be filled in the image
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color can be filled in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
