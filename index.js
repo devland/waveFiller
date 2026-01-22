@@ -2,7 +2,7 @@
 function waveFiller(options) {
   this.canvas = options.canvas; // canvas DOM element
   this.imageSrc = options.imageSrc; // image to render in the canvas
-  this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank
+  this.threshold = options.threshold || 20; // maximum deviance in color channel value allowed for a pixel to be considered blank; can be fived value or [R,G,B,A] array
   this.margin = options.margin || [0, 0, 0, 255]; // black - set it to whatever color can never be filled in the image
   this.blank = options.blank || [255, 255, 255, 255]; // white - set it to whatever color can be filled in the image
   this.pixel = options.pixel || [255, 0, 0, 50]; // red - set it to whatever fill color you want as RGBA
@@ -254,10 +254,10 @@ function waveFiller(options) {
     this.pixels.data[start + 3] = pixel[3];
   }
   this.equalColors = (first, second) => {
-    if (Math.abs(first[0] - second[0]) <= this.threshold &&
-        Math.abs(first[1] - second[1]) <= this.threshold &&
-        Math.abs(first[2] - second[2]) <= this.threshold &&
-        Math.abs(first[3] - second[3]) <= this.threshold) {
+    if (Math.abs(first[0] - second[0]) <= (this.threshold[0] || this.threshold) &&
+        Math.abs(first[1] - second[1]) <= (this.threshold[1] || this.threshold) &&
+        Math.abs(first[2] - second[2]) <= (this.threshold[2] || this.threshold) &&
+        Math.abs(first[3] - second[3]) <= (this.threshold[3] || this.threshold)) {
       return true;
     }
     return false;
@@ -635,7 +635,7 @@ function waveFiller(options) {
       if (this.equalColors(this.pixel, blank)) {
         throw 'forbidden: fill color ~ blank color';
       }
-      if (this.equalColors(this.margin, blank)) {
+      if (this.equalColors(blank, this.margin)) {
         throw 'forbidden: blank color ~ margin color';
       }
       this.blank = blank;

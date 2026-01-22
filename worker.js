@@ -29,10 +29,10 @@ const putPixel = (x, y) => {
 }
 const isBlank = (x, y) => {
   const pixel = getPixel(x, y);
-  if (Math.abs(context.blank[0] - pixel[0]) <= context.threshold &&
-      Math.abs(context.blank[1] - pixel[1]) <= context.threshold &&
-      Math.abs(context.blank[2] - pixel[2]) <= context.threshold &&
-      Math.abs(context.blank[3] - pixel[3]) <= context.threshold) {
+  if (Math.abs(context.blank[0] - pixel[0]) <= (context.threshold[0] || context.threshold) &&
+      Math.abs(context.blank[1] - pixel[1]) <= (context.threshold[1] || context.threshold) &&
+      Math.abs(context.blank[2] - pixel[2]) <= (context.threshold[2] || context.threshold) &&
+      Math.abs(context.blank[3] - pixel[3]) <= (context.threshold[3] || context.threshold)) {
     return true;
   }
   return false;
